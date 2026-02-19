@@ -170,13 +170,19 @@ class JWTVerifier:
             "verify_aud": self.audience is not None,
         }
 
+        issuers: set[str] = {self.issuer}
+        issuer_without_slash = self.issuer.rstrip("/")
+
+        if issuer_without_slash:
+            issuers.add(issuer_without_slash)
+
         try:
             claims = jwt.decode(
                 token,
                 key,
                 algorithms=list(self.allowed_algorithms),
                 audience=self.audience,
-                issuer=self.issuer,
+                issuer=tuple(issuers),
                 options=options,
             )
             return claims

@@ -49,9 +49,9 @@ class TestUserTokenProfile:
         """Create valid user token claims."""
         now = int(time.time())
         return TrustedClaims({
-            "iss": "",
+            "iss": "https://auth.example.test/",
             "sub": "user@example.com",
-            "aud": "",
+            "aud": "https://api.example.test",
             "exp": now + 3600,
             "iat": now - 60,
             "nbf": now - 60,
@@ -196,8 +196,8 @@ class TestAuth0Profile:
     def test_profile_validates_claims(self):
         """Profile should validate matching Auth0 claims."""
         claims = TrustedClaims({
-            "iss": "https://auth.example.com/",
-            "aud": "",
+            "iss": "https://auth.example.test/",
+            "aud": "https://api.example.test",
             "sub": "client@clients",
             "exp": 9999999999,
             "scope": "read:models write:models",
@@ -207,8 +207,8 @@ class TestAuth0Profile:
         })
 
         profile = Auth0Profile(
-            issuer="https://auth.example.com/",
-            audience="",
+            issuer="https://auth.example.test/",
+            audience="https://api.example.test",
             app_name="svc-app",
         )
 
@@ -217,8 +217,8 @@ class TestAuth0Profile:
     def test_profile_rejects_missing_scope(self):
         """Missing required scope should raise PermissionDeniedError."""
         claims = TrustedClaims({
-            "iss": "https://auth.example.com/",
-            "aud": "",
+            "iss": "https://auth.example.test/",
+            "aud": "https://api.example.test",
             "sub": "client@clients",
             "exp": 9999999999,
             "scope": "read:models",
@@ -228,8 +228,8 @@ class TestAuth0Profile:
         })
 
         profile = Auth0Profile(
-            issuer="https://auth.example.com/",
-            audience="",
+            issuer="https://auth.example.test/",
+            audience="https://api.example.test",
             app_name="svc-app",
         )
 
@@ -242,8 +242,8 @@ class TestAuth0Profile:
     def test_profile_rejects_wrong_app_name(self):
         """Mismatched appName should raise InvalidClaimError."""
         claims = TrustedClaims({
-            "iss": "https://auth.example.com/",
-            "aud": "",
+            "iss": "https://auth.example.test/",
+            "aud": "https://api.example.test",
             "sub": "client@clients",
             "exp": 9999999999,
             "scope": "read:models",
@@ -253,8 +253,8 @@ class TestAuth0Profile:
         })
 
         profile = Auth0Profile(
-            issuer="https://auth.example.com/",
-            audience="",
+            issuer="https://auth.example.test/",
+            audience="https://api.example.test",
             app_name="svc-app",
         )
 
@@ -264,8 +264,8 @@ class TestAuth0Profile:
     def test_profile_rejects_wrong_grant_type(self):
         """Non client-credentials grant should fail validation."""
         claims = TrustedClaims({
-            "iss": "https://auth.example.com/",
-            "aud": "",
+            "iss": "https://auth.example.test/",
+            "aud": "https://api.example.test",
             "sub": "client@clients",
             "exp": 9999999999,
             "scope": "read:models",
@@ -275,8 +275,8 @@ class TestAuth0Profile:
         })
 
         profile = Auth0Profile(
-            issuer="https://auth.example.com/",
-            audience="",
+            issuer="https://auth.example.test/",
+            audience="https://api.example.test",
             app_name="svc-app",
         )
 
