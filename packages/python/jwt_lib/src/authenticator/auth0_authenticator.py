@@ -25,6 +25,7 @@ class Auth0Authenticator(Authenticator):
         self.issuer = issuer
         self.audience = audience
         self.profile_kwargs = dict(profile_kwargs or {})
+        
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()
 

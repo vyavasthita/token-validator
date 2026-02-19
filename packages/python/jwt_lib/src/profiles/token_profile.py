@@ -26,7 +26,8 @@ class TokenProfile(ABC):
     Subclasses should:
     1. Define expected claim values as constructor parameters
     2. Build validation rules in __init__
-    3. Implement any custom validation logic in _custom_validations()
+    3. Override validate() to orchestrate rule execution
+    4. Implement any custom validation logic in _custom_validations()
 
     Example:
         class MyTokenProfile(TokenProfile):
@@ -60,6 +61,7 @@ class TokenProfile(ABC):
         """
         pass
 
+    @abstractmethod
     def validate(
         self,
         claims: TrustedClaims,
@@ -68,8 +70,7 @@ class TokenProfile(ABC):
         """
         Validate claims against this profile.
 
-        This method applies all validation rules defined by the profile.
-        Override _custom_validations() to add additional validation logic.
+        Subclasses decide how to apply rule-based and custom checks.
 
         Args:
             claims: The verified claims to validate.
@@ -79,15 +80,9 @@ class TokenProfile(ABC):
             InvalidClaimError: If a claim validation fails.
             PermissionDeniedError: If a permission check fails.
         """
-        # Apply rule-based validations
-        self._validator.validate(claims)
+        raise NotImplementedError
 
-        if extra_rules:
-            ClaimValidator(list(extra_rules)).validate(claims)
-
-        # Apply any custom validations
-        self._custom_validations(claims)
-
+    @abstractmethod
     def _custom_validations(self, claims: TrustedClaims) -> None:
         """
         Perform additional custom validations.
@@ -101,7 +96,7 @@ class TokenProfile(ABC):
         Raises:
             JWTError subclass: If validation fails.
         """
-        pass  # Default: no custom validations
+        raise NotImplementedError
 
     @property
     def profile_name(self) -> str:

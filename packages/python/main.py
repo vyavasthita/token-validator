@@ -34,10 +34,6 @@ from jwt_lib.src.exceptions import (
 )
 
 # =============================================================================
-# Constants
-# =============================================================================
-
-# =============================================================================
 # Demo Functions
 # =============================================================================
 
@@ -134,27 +130,16 @@ async def demo_auth0_token_validation() -> None:
     print("DEMO 3: Auth0 Client Code Using Real Token")
     print("=" * 70)
 
-    token = os.getenv("AUTH_0_TOKEN")
-
-    if not token:
-        print(
-            f"Skipping demo: set AUTH_0_TOKEN env var with a real token to run this example."
-        )
-        return
-
     scope_rules = RequireScopes(["update:core"])
-
-    issuer = ""
-    audience = ""
 
     try:
         authenticator = Auth0Authenticator(
-            issuer=issuer,
-            audience=audience,
+            issuer=os.getenv("AUTH_0_ISSUER", ""),
+            audience=os.getenv("AUTH_0_AUDIENCE"),
             profile_kwargs={"app_name": "lmr-db-client"}
         )
 
-        claims = await authenticator.validate(token, extra_rules=[scope_rules])
+        claims = await authenticator.validate(os.getenv("AUTH_0_TOKEN", ""), extra_rules=[scope_rules])
         print("\n✓ Signature + standard claims validated via JWTVerifier")
         print("✓ Auth0 profile validation passed (grant type, appName, azp, optional scopes)")
     except (

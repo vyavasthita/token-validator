@@ -4,9 +4,11 @@ Auth0 Token Profile.
 Encapsulates validation rules for Auth0-issued service tokens.
 """
 
+from typing import Iterable
+
 from .token_profile import TokenProfile
 from jwt_lib.src.claims import TrustedClaims
-from jwt_lib.src.validation import ClaimRule, RequireClaim
+from jwt_lib.src.validation import ClaimRule, ClaimValidator, RequireClaim
 from jwt_lib.src.exceptions import InvalidClaimError
 
 
@@ -34,6 +36,18 @@ class Auth0Profile(TokenProfile):
             rules.append(RequireClaim("gty", self.expected_grant_type))
 
         return rules
+
+    def validate(
+        self,
+        claims: TrustedClaims,
+        extra_rules: Iterable[ClaimRule] | None = None,
+    ) -> None:
+        self._validator.validate(claims)
+
+        if extra_rules:
+            ClaimValidator(list(extra_rules)).validate(claims)
+
+        self._custom_validations(claims)
 
     def _custom_validations(self, claims: TrustedClaims) -> None:
         """Validate optional app name claim."""

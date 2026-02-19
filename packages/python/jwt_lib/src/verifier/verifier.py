@@ -83,7 +83,6 @@ class JWTVerifier:
         if audience and "aud" not in self.required_claims:
             self.required_claims.append("aud")
 
-        self.jwks_uri = f"{self.issuer.rstrip('/')}/.well-known/jwks.json"
         self._jwks_client = PyJWKClient(self.jwks_uri)
 
     def _get_unverified_header(self, token: str) -> dict[str, Any]:
@@ -244,5 +243,10 @@ class JWTVerifier:
         claims = self._decode_and_verify(token, key)
 
         return TrustedClaims(claims, headers=header)
+
+    @property
+    def jwks_uri(self) -> str:
+        """Return the JWKS endpoint derived from the issuer."""
+        return f"{self.issuer.rstrip('/')}/.well-known/jwks.json"
 
 

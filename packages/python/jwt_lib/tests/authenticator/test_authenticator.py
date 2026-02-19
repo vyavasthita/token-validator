@@ -13,7 +13,7 @@ from jwt_lib.src.config.config import (
     DEFAULT_USER_ISSUER,
 )
 from jwt_lib.src.profiles import TokenProfile, UserTokenProfile
-from jwt_lib.src.validation import ClaimRule, RequireClaim
+from jwt_lib.src.validation import ClaimRule, ClaimValidator, RequireClaim
 from jwt_lib.src.exceptions import InvalidClaimError
 
 
@@ -34,6 +34,18 @@ class _StubProfile(TokenProfile):
 
     def _build_rules(self) -> list[ClaimRule]:
         return []
+
+    def validate(
+        self,
+        claims: TrustedClaims,
+        extra_rules: Iterable[ClaimRule] | None = None,
+    ) -> None:
+        self._validator.validate(claims)
+
+        if extra_rules:
+            ClaimValidator(list(extra_rules)).validate(claims)
+
+        self._custom_validations(claims)
 
     def _custom_validations(self, claims: TrustedClaims) -> None:
         self.validated_with = claims
