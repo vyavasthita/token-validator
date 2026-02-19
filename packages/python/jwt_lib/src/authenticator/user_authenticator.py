@@ -1,4 +1,4 @@
-"""Authenticator for Anaplan user tokens."""
+"""Authenticator for user tokens."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from .authenticator import Authenticator
 
 
 class UserAuthenticator(Authenticator):
-    """Authenticator for Anaplan user tokens."""
+    """Authenticator for user tokens."""
 
     def __init__(
         self,
