@@ -32,7 +32,7 @@ class ClaimValidator:
         Args:
             rules: Iterable of ClaimRule objects to execute during validation.
         """
-        self._rules: list[ClaimRule] = list(rules) if rules else []
+        self._rules: list[ClaimRule] = list(rules or [])
 
     def add_rule(self, rule: ClaimRule) -> "ClaimValidator":
         """
