@@ -20,7 +20,7 @@ from jwt_lib.src.exceptions import (
     SigningKeyNotFoundError,
 )
 
-from tests.conftest import create_token
+from jwt_lib.tests.conftest import create_token
 
 
 DEFAULT_JWKS_URI = "https://example.com/.well-known/jwks.json"
