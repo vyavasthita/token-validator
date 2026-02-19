@@ -74,7 +74,7 @@ class JWTVerifier:
             allowed_algorithms: Allowed signing algorithms. Defaults to ["RS256"].
             required_claims: Claims that must be present. Defaults to ["exp", "iss", "sub"].
         """
-        self.issuer = issuer.rstrip("/") + "/"  # Normalize to single trailing slash
+        self._issuer = issuer
         self.audience = audience
         self.allowed_algorithms = set(allowed_algorithms or ["RS256"])
         self.required_claims = required_claims or self.DEFAULT_REQUIRED_CLAIMS.copy()
@@ -248,5 +248,14 @@ class JWTVerifier:
     def jwks_uri(self) -> str:
         """Return the JWKS endpoint derived from the issuer."""
         return f"{self.issuer.rstrip('/')}/.well-known/jwks.json"
+
+    @property
+    def issuer(self) -> str:
+        """Issuer normalized to a single trailing slash."""
+        return self._issuer.rstrip("/") + "/"
+
+    @issuer.setter
+    def issuer(self, value: str) -> None:
+        self._issuer = value
 
 

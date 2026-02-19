@@ -22,27 +22,23 @@ class Auth0Profile(TokenProfile):
         app_name: str | None = None,
         grant_type: str = "client-credentials",
     ) -> None:
-        self.issuer = issuer.rstrip("/") + "/"
+        self._issuer = issuer
         self.audience = audience
         self.expected_app_name = app_name
         self.expected_grant_type = grant_type
-        super().__init__()
+        
+        super().__init__(self._build_rules())
 
     def _build_rules(self) -> list[ClaimRule]:
         """Require core Auth0 service token claims."""
-        rules: list[ClaimRule] = []
-
-        if self.expected_grant_type:
-            rules.append(RequireClaim("gty", self.expected_grant_type))
-
-        return rules
+        return [RequireClaim("gty", self.expected_grant_type)] if self.expected_grant_type else []
 
     def validate(
         self,
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
-        self._validator.validate(claims)
+        self._claim_validator.validate(claims)
 
         if extra_rules:
             ClaimValidator(list(extra_rules)).validate(claims)
@@ -62,3 +58,11 @@ class Auth0Profile(TokenProfile):
     @property
     def profile_name(self) -> str:
         return "Auth0ServiceToken"
+
+    @property
+    def issuer(self) -> str:
+        return self._issuer.rstrip("/") + "/"
+
+    @issuer.setter
+    def issuer(self, value: str) -> None:
+        self._issuer = value

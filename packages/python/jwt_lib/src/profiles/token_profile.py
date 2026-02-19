@@ -26,17 +26,16 @@ class TokenProfile(ABC):
     Subclasses should:
     1. Define expected claim values as constructor parameters
     2. Build validation rules in __init__
-    3. Override validate() to orchestrate rule execution
-    4. Implement any custom validation logic in _custom_validations()
+    3. Pass those rules to the base constructor
+    4. Override validate() to orchestrate rule execution
+    5. Implement any custom validation logic in _custom_validations()
 
     Example:
         class MyTokenProfile(TokenProfile):
             def __init__(self, expected_role: str):
                 self.expected_role = expected_role
-                super().__init__()
-
-            def _build_rules(self) -> list[ClaimRule]:
-                return [RequireClaim("role", self.expected_role)]
+                rules = [RequireClaim("role", self.expected_role)]
+                super().__init__(rules)
 
     Usage:
         profile = MyTokenProfile(expected_role="admin")
@@ -44,22 +43,9 @@ class TokenProfile(ABC):
         profile.validate(claims)  # Raises if validation fails
     """
 
-    def __init__(self) -> None:
-        """Initialize the profile and build validation rules."""
-        self._validator = ClaimValidator(self._build_rules())
-
-    @abstractmethod
-    def _build_rules(self) -> list[ClaimRule]:
-        """
-        Build the list of validation rules for this profile.
-
-        Override this method to define the validation rules specific
-        to this token profile.
-
-        Returns:
-            List of ClaimRule instances to apply during validation.
-        """
-        pass
+    def __init__(self, rules: Iterable[ClaimRule]) -> None:
+        """Initialize the profile with its validation rules."""
+        self._claim_validator = ClaimValidator(rules)
 
     @abstractmethod
     def validate(

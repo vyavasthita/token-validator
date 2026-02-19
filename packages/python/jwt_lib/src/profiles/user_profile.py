@@ -41,31 +41,34 @@ class UserTokenProfile(TokenProfile):
         self.require_model_id = DEFAULT_USER_REQUIRE_MODEL_ID
         self.clock_skew_seconds = DEFAULT_USER_CLOCK_SKEW_SECONDS
         self.max_token_age_seconds = DEFAULT_USER_MAX_TOKEN_AGE_SECONDS
-        super().__init__()
+        super().__init__(self._build_rules())
 
     def _build_rules(self) -> list[ClaimRule]:
         """Build validation rules for user tokens."""
-        rules: list[ClaimRule] = [
+        base_rules: list[ClaimRule] = [
             RequireClaim("tokenType", self.TOKEN_TYPE),
             RequireClaim("principalType", self.PRINCIPAL_TYPE),
             RequireClaim("aud", self.audience),
             RequireClaimIn("connectionMethod", self.allowed_connection_methods),
         ]
 
-        if self.require_workspace_id:
-            rules.append(RequireClaim("workspaceId"))
-            
-        if self.require_model_id:
-            rules.append(RequireClaim("modelId"))
+        optional_rules = [
+            rule
+            for cond, rule in (
+                (self.require_workspace_id, RequireClaim("workspaceId")),
+                (self.require_model_id, RequireClaim("modelId")),
+            )
+            if cond
+        ]
 
-        return rules
+        return base_rules + optional_rules
 
     def validate(
         self,
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
-        self._validator.validate(claims)
+        self._claim_validator.validate(claims)
 
         if extra_rules:
             ClaimValidator(list(extra_rules)).validate(claims)

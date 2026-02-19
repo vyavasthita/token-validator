@@ -30,7 +30,7 @@ class _StubVerifier:
 class _StubProfile(TokenProfile):
     def __init__(self) -> None:
         self.validated_with: TrustedClaims | None = None
-        super().__init__()
+        super().__init__(self._build_rules())
 
     def _build_rules(self) -> list[ClaimRule]:
         return []
@@ -40,7 +40,7 @@ class _StubProfile(TokenProfile):
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
-        self._validator.validate(claims)
+        self._claim_validator.validate(claims)
 
         if extra_rules:
             ClaimValidator(list(extra_rules)).validate(claims)
