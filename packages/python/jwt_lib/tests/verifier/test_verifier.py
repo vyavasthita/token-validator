@@ -126,7 +126,7 @@ class TestJWTVerifierValidation:
         assert claims.issuer == test_issuer
 
     @pytest.mark.asyncio
-    async def test_accepts_issuer_without_trailing_slash(
+    async def test_rejects_issuer_without_trailing_slash(
         self,
         test_issuer: str,
         test_audience: str,
@@ -134,7 +134,7 @@ class TestJWTVerifierValidation:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Tokens that omit trailing slash in iss should still validate."""
+        """Tokens that omit trailing slash in iss should be rejected."""
         _, public_key = rsa_key_pair
 
         claims_without_slash = base_claims.copy()
@@ -158,10 +158,8 @@ class TestJWTVerifierValidation:
         )
         verifier._jwks_client = mock_jwks_client
 
-        claims = await verifier.validate(token)
-
-        assert isinstance(claims, TrustedClaims)
-        assert claims.issuer == claims_without_slash["iss"]
+        with pytest.raises(InvalidIssuerError):
+            await verifier.validate(token)
 
 class TestJWTVerifierErrors:
     """Tests for JWT verification error cases."""

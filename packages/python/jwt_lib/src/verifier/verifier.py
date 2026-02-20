@@ -11,6 +11,7 @@ instance that downstream profiles can trust. Domain-specific checks stay in
 import jwt
 from typing import Any, Iterable
 from jwt import PyJWKClient
+from jwt.types import Options
 from jwt.exceptions import (
     ExpiredSignatureError,
     InvalidAudienceError as PyJWTInvalidAudienceError,
@@ -161,7 +162,7 @@ class JWTVerifier:
             InvalidAudienceError: If the audience does not match.
             InvalidTokenError: For other validation failures.
         """
-        options = {
+        options: Options = {
             "require": self.required_claims,
             "verify_exp": True,
             "verify_nbf": True,
@@ -169,19 +170,13 @@ class JWTVerifier:
             "verify_aud": self.audience is not None,
         }
 
-        issuers: set[str] = {self.issuer}
-        issuer_without_slash = self.issuer.rstrip("/")
-
-        if issuer_without_slash:
-            issuers.add(issuer_without_slash)
-
         try:
             claims = jwt.decode(
                 token,
                 key,
                 algorithms=list(self.allowed_algorithms),
                 audience=self.audience,
-                issuer=tuple(issuers),
+                issuer=self.issuer,
                 options=options,
             )
             return claims
