@@ -60,7 +60,7 @@ async def demo_architecture_summary() -> None:
 │        ▼ TrustedClaims                                              │
 │  ┌───────────────────────────────────────────────────────┐          │
 │  │  TokenProfile (Strategy Pattern: Business Logic)      │          │
-│  │  • UserTokenProfile                                   │          │
+│  │  • UserProfile                                        │          │
 │  │  • Auth0Profile                                       │          │
 │  └───────────────────────────────────────────────────────┘          │
 │                                                                     │
@@ -77,7 +77,7 @@ async def demo_architecture_summary() -> None:
 │                                                                     │
 │  # Configure once at startup                                        │
 │  verifier = JWTVerifier(issuer="...", audience="...")               |
-│  user_profile = UserTokenProfile(...)                               │
+│  user_profile = UserProfile(...)                                    │
 │                                                                     │
 │  # In auth middleware                                               │
 │  async def authenticate(token: str):                                │
@@ -94,18 +94,13 @@ async def demo_user_token() -> None:
     print("DEMO 1: User Token Validation (Real Token)")
     print("=" * 70)
 
-    token = os.getenv("AUTH_TOKEN")
-
-    if not token:
-        print(
-            "Skipping demo: set AUTH_TOKEN env var with a real user token to run this example."
-        )
-        return
-
     try:
-        authenticator = UserAuthenticator()
+        authenticator = UserAuthenticator(
+            issuer=os.getenv("AUTH_USER_ISSUER", ""),
+            audience=os.getenv("AUTH_USER_AUDIENCE"),
+        )
 
-        claims = await authenticator.validate(token)
+        claims = await authenticator.validate(os.getenv("AUTH_TOKEN", ""))
         print("\n✓ Step 1: Signature + standard claims validated via JWTVerifier")
         print(f"✓ Step 2: Profile validated ({authenticator.profile.profile_name})")
     except (
@@ -164,8 +159,8 @@ async def main() -> None:
     print("#  JWT Library Demo - Profile-Based Architecture")
     print("#" * 70)
 
-    # await demo_user_token()
-    await demo_auth0_token_validation()
+    await demo_user_token()
+    # await demo_auth0_token_validation()
     # await demo_architecture_summary()
 
     print("\n" + "=" * 70)

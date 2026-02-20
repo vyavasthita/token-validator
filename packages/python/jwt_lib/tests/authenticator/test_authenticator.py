@@ -8,16 +8,15 @@ from jwt_lib.src.authenticator import (
     UserAuthenticator,
 )
 from jwt_lib.src.claims import TrustedClaims
-from jwt_lib.src.config.config import (
-    DEFAULT_USER_AUDIENCE,
-    DEFAULT_USER_ISSUER,
-)
-from jwt_lib.src.profiles import TokenProfile, UserTokenProfile
+from jwt_lib.src.profiles import Auth0Profile, TokenProfile, UserProfile
+from jwt_lib.src.verifier import JWTVerifier
 from jwt_lib.src.validation import ClaimRule, ClaimValidator, RequireClaim
 from jwt_lib.src.exceptions import InvalidClaimError
 
+USER_DEFAULT_ISSUER = "https://auth.example.test/"
 
-class _StubVerifier:
+
+class _StubVerifier(JWTVerifier):
     def __init__(self, claims: TrustedClaims) -> None:
         self.claims = claims
         self.tokens: list[str] = []
@@ -57,10 +56,10 @@ class _ConcreteAuthenticator(Authenticator):
         self._verifier = verifier
         self._profile = profile
 
-    def _create_verifier(self) -> _StubVerifier:  # pragma: no cover - unused
+    def _create_verifier(self) -> JWTVerifier:  # pragma: no cover - unused
         return self._verifier
 
-    def _create_profile(self) -> _StubProfile:  # pragma: no cover - unused
+    def _create_profile(self) -> TokenProfile:  # pragma: no cover - unused
         return self._profile
 
     async def validate(
@@ -107,15 +106,16 @@ async def test_authenticator_applies_extra_rules():
 
 
 def test_user_authenticator_uses_defaults():
-    authenticator = UserAuthenticator()
+    authenticator = UserAuthenticator(issuer=USER_DEFAULT_ISSUER)
 
-    expected_issuer = DEFAULT_USER_ISSUER.rstrip("/") + "/"
+    expected_issuer = USER_DEFAULT_ISSUER.rstrip("/") + "/"
     assert authenticator.verifier.issuer == expected_issuer
-    assert authenticator.verifier.audience == DEFAULT_USER_AUDIENCE
+    assert authenticator.verifier.audience is None
 
     profile = authenticator.profile
-    assert isinstance(profile, UserTokenProfile)
-    assert profile.allowed_connection_methods == ["UIDPWD"]
+    assert isinstance(profile, UserProfile)
+    assert profile.issuer == USER_DEFAULT_ISSUER
+    assert profile.audience is None
 
 
 def test_auth0_authenticator_uses_defaults():
@@ -132,6 +132,7 @@ def test_auth0_authenticator_uses_defaults():
     assert verifier.jwks_uri == "https://auth.example.com/.well-known/jwks.json"
 
     profile = authenticator.profile
+    assert isinstance(profile, Auth0Profile)
     assert profile.expected_app_name == "svc-app"
 
 

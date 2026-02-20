@@ -171,7 +171,7 @@ class JWTVerifier:
         }
 
         try:
-            claims = jwt.decode(
+            return jwt.decode(
                 token,
                 key,
                 algorithms=list(self.allowed_algorithms),
@@ -179,8 +179,6 @@ class JWTVerifier:
                 issuer=self.issuer,
                 options=options,
             )
-            return claims
-
         except ExpiredSignatureError as exc:
             raise ExpiredTokenError("The token has expired") from exc
 

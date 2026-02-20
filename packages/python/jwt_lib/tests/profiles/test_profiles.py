@@ -5,19 +5,22 @@ import pytest
 
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.profiles import (
-    UserTokenProfile,
+    UserProfile,
     Auth0Profile,
 )
 from jwt_lib.src.exceptions import InvalidClaimError, PermissionDeniedError
 from jwt_lib.src.validation.rules import RequireScopes
 
+USER_ISSUER = "https://auth.example.test/"
+USER_AUDIENCE = "https://api.example.test"
+
 
 # ============================================================================
-# Test UserTokenProfile
+# Test UserProfile
 # ============================================================================
 
 
-class TestUserTokenProfile:
+class TestUserProfile:
     """Tests for user token profile."""
 
     @staticmethod
@@ -49,9 +52,9 @@ class TestUserTokenProfile:
         """Create valid user token claims."""
         now = int(time.time())
         return TrustedClaims({
-            "iss": "https://auth.example.test/",
+            "iss": USER_ISSUER,
             "sub": "user@example.com",
-            "aud": "https://api.example.test",
+            "aud": USER_AUDIENCE,
             "exp": now + 3600,
             "iat": now - 60,
             "nbf": now - 60,
@@ -61,9 +64,9 @@ class TestUserTokenProfile:
         }, headers=token_headers)
 
     @pytest.fixture
-    def profile(self) -> UserTokenProfile:
+    def profile(self) -> UserProfile:
         """Create default user profile."""
-        return UserTokenProfile()
+        return UserProfile(issuer=USER_ISSUER, audience=USER_AUDIENCE)
 
     def test_valid_claims_pass(self, profile, valid_user_claims):
         """Test that valid claims pass validation."""
@@ -96,15 +99,15 @@ class TestUserTokenProfile:
         with pytest.raises(InvalidClaimError, match="connectionMethod"):
             profile.validate(claims)
 
-    def test_profile_uses_default_configuration(self):
-        """Profile should expose immutable default configuration values."""
-        profile = UserTokenProfile()
+    def test_invalid_audience_fails(self, profile, valid_user_claims):
+        """aud must match the configured audience when provided."""
+        claims = self._claims_with(
+            valid_user_claims,
+            aud="https://api.other.example",
+        )
 
-        assert profile.allowed_connection_methods == ["UIDPWD"]
-        assert profile.require_workspace_id is False
-        assert profile.require_model_id is False
-        assert profile.clock_skew_seconds == 60
-        assert profile.max_token_age_seconds is None
+        with pytest.raises(InvalidClaimError, match="aud"):
+            profile.validate(claims)
 
     def test_profile_name(self, profile):
         """Test profile name property."""
@@ -140,14 +143,14 @@ class TestUserTokenProfile:
         with pytest.raises(InvalidClaimError, match="alg"):
             profile.validate(claims)
 
-    def test_invalid_audience_fails(self, profile, valid_user_claims):
-        """aud must match the configured audience."""
+    def test_invalid_issuer_fails(self, profile, valid_user_claims):
+        """iss must match the configured issuer."""
         claims = self._claims_with(
             valid_user_claims,
-            aud="https://other-api.example.com",
+            iss="https://other-issuer.example.com",
         )
 
-        with pytest.raises(InvalidClaimError, match="aud"):
+        with pytest.raises(InvalidClaimError, match="iss"):
             profile.validate(claims)
 
     def test_iat_in_future_fails(self, profile, valid_user_claims):

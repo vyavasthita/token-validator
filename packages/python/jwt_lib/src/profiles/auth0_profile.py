@@ -31,7 +31,12 @@ class Auth0Profile(TokenProfile):
 
     def _build_rules(self) -> list[ClaimRule]:
         """Require core Auth0 service token claims."""
-        return [RequireClaim("gty", self.expected_grant_type)]
+        rules: list[ClaimRule] = [RequireClaim("gty", self.expected_grant_type)]
+
+        if self.audience:
+            rules.append(RequireClaim("aud", self.audience))
+
+        return rules
 
     def validate(
         self,

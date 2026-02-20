@@ -2,14 +2,12 @@
 
 from typing import Final
 
-DEFAULT_USER_ISSUER = "https://auth.example.test/"
+DEFAULT_USER_ISSUER = "https://auth.anaplan.com"
 DEFAULT_USER_AUDIENCE = "https://api.example.test"
-DEFAULT_USER_JWKS_URI = ""
+DEFAULT_USER_JWKS_URI = "https://us1a.app-chimera.anaplan.com/token/.well-known/jwks.json"
 DEFAULT_USER_ALLOWED_ALGORITHMS = ("RS256",)
 DEFAULT_USER_TOKEN_TYPE = "AuthToken"
 DEFAULT_USER_PRINCIPAL_TYPE = "USER"
-DEFAULT_USER_REQUIRE_WORKSPACE_ID: Final[bool] = False
-DEFAULT_USER_REQUIRE_MODEL_ID: Final[bool] = False
 DEFAULT_USER_MAX_TOKEN_AGE_SECONDS: Final[int | None] = None
 
 USER_CONNECTION_METHOD_UIDPWD: Final[str] = "UIDPWD"

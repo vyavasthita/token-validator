@@ -47,9 +47,7 @@ jwt-lib = { git = "https://github.com/vyavasthita/jwt-lib.git", branch = "main",
 ```python
 from jwt_lib.src.authenticator import UserAuthenticator
 
-authenticator = UserAuthenticator(
-	profile_kwargs={"require_workspace_id": True}
-)
+authenticator = UserAuthenticator(issuer="https://auth.anaplan.com")
 
 claims = await authenticator.validate(token)  # Verifier + profile run together
 ```

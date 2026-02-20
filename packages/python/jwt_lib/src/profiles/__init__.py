@@ -6,11 +6,11 @@ Each profile encapsulates domain-specific validation logic.
 """
 
 from .token_profile import TokenProfile
-from .user_profile import UserTokenProfile
+from .user_profile import UserProfile
 from .auth0_profile import Auth0Profile
 
 __all__ = [
     "TokenProfile",
-    "UserTokenProfile",
+    "UserProfile",
     "Auth0Profile",
 ]
