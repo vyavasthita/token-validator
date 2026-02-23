@@ -84,6 +84,15 @@ class TokenProfile(ABC):
         """
         raise NotImplementedError
 
+    def _apply_extra_rules(
+        self,
+        claims: TrustedClaims,
+        extra_rules: Iterable[ClaimRule] | None = None,
+    ) -> None:
+        """Run optional supplemental claim rules when provided."""
+        if extra_rules:
+            ClaimValidator(extra_rules).validate(claims)
+
     @property
     def profile_name(self) -> str:
         """

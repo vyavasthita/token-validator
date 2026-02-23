@@ -6,7 +6,6 @@ from .token_profile import TokenProfile
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.validation import (
     ClaimRule,
-    ClaimValidator,
     RequireClaim,
     RequireClaimIn,
 )
@@ -51,11 +50,7 @@ class UserProfile(TokenProfile):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
         self._claim_validator.validate(claims)
-
-        if extra_rules:
-            runtime_rules: list[ClaimRule] = list(extra_rules)
-            runtime_validator: ClaimValidator = ClaimValidator(runtime_rules)
-            runtime_validator.validate(claims)
+        self._apply_extra_rules(claims, extra_rules)
 
         self._custom_validations(claims)
 

@@ -9,7 +9,7 @@ from jwt_lib.src.profiles import (
     Auth0Profile,
 )
 from jwt_lib.src.exceptions import InvalidClaimError, PermissionDeniedError
-from jwt_lib.src.validation.rules import RequireScopes
+from jwt_lib.src.validation.rules import RequireClaim, RequireScopes
 
 USER_ISSUER = "https://auth.example.test/"
 USER_AUDIENCE = "https://api.example.test"
@@ -123,6 +123,26 @@ class TestUserProfile:
 
         with pytest.raises(InvalidClaimError, match="iss"):
             profile.validate(claims)
+
+    def test_extra_rules_can_fail(self, profile, valid_user_claims):
+        """Extra rules should be evaluated when provided."""
+        with pytest.raises(InvalidClaimError, match="customClaim"):
+            profile.validate(
+                valid_user_claims,
+                extra_rules=[RequireClaim("customClaim", "expected")],
+            )
+
+    def test_extra_rules_can_pass(self, profile, valid_user_claims):
+        """Extra rules succeed once claims satisfy them."""
+        claims = self._claims_with(
+            valid_user_claims,
+            customClaim="expected",
+        )
+
+        profile.validate(
+            claims,
+            extra_rules=[RequireClaim("customClaim", "expected")],
+        )
 
 
 # ============================================================================
