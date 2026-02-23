@@ -68,12 +68,12 @@ class JWTVerifier(ABC):
 
     async def _verify_token(self, token: str) -> tuple[dict[str, Any], dict[str, Any]]:
         """Run the full verification pipeline and return the decoded pieces."""
-        header = self._get_unverified_header(token)
+        header: dict[str, Any] = self._get_unverified_header(token)
         # Apply algorithm allow-list checks before touching the JWKS client.
         self._validate_algorithm(header)
         # Fetch the signing key via JWKS and decode with PyJWT.
-        signing_key = self._get_signing_key(token, self._jwks_client)
-        claims = self._decode_and_verify(token, signing_key)
+        signing_key: Any = self._get_signing_key(token, self._jwks_client)
+        claims: dict[str, Any] = self._decode_and_verify(token, signing_key)
         return header, claims
 
     def _get_unverified_header(self, token: str) -> dict[str, Any]:
@@ -85,7 +85,7 @@ class JWTVerifier(ABC):
 
     def _validate_algorithm(self, header: dict[str, Any]) -> None:
         """Ensure the JOSE header's alg value is on the allow-list."""
-        algorithm = header.get("alg")
+        algorithm: Any = header.get("alg")
         if algorithm not in self.allowed_algorithms:
             allowed = ", ".join(sorted(self.allowed_algorithms))
             raise AlgorithmNotAllowedError(

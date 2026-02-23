@@ -60,6 +60,6 @@ class UserAuthenticator(Authenticator):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
         """Verify the token and enforce profile + optional claim rules."""
-        claims = await self.verifier.validate(token)
+        claims: TrustedClaims = await self.verifier.validate(token)
         self.profile.validate(claims, extra_rules=extra_rules)
         return claims

@@ -65,6 +65,8 @@ class UserJWTVerifier(JWTVerifier):
 
     async def validate(self, token: str) -> TrustedClaims:
         """Run JOSE + temporal enforcement after base cryptographic checks."""
+        header: dict[str, Any]
+        claims: dict[str, Any]
         header, claims = await self._verify_token(token)
         self._enforce_header_rules(header)
         self._enforce_temporal_rules(claims)
@@ -82,14 +84,14 @@ class UserJWTVerifier(JWTVerifier):
             raise InvalidClaimError("Token header must include 'kid'")
 
         # typ guards against accidentally accepting tokens minted for other flows.
-        typ = header.get("typ")
+        typ: object | None = header.get("typ")
         if typ != self.expected_header_typ:
             raise InvalidClaimError(
                 f"Token header typ must be '{self.expected_header_typ}'"
             )
 
         # alg must match the allow-list exactly to prevent downgrade attacks.
-        alg = header.get("alg")
+        alg: object | None = header.get("alg")
         if alg != self.expected_header_alg:
             raise InvalidClaimError(
                 f"Token header alg must be '{self.expected_header_alg}'"
@@ -101,13 +103,13 @@ class UserJWTVerifier(JWTVerifier):
         The checks mirror common IdP recommendations but keep error messages in
         the domain language of consuming services.
         """
-        now = int(time.time())
-        skew = self.clock_skew_seconds
+        now: int = int(time.time())
+        skew: int = self.clock_skew_seconds
 
         # iat confirms the token was minted recently and not in the future.
         iat_source: Any = claims.get("iat", _MISSING)
         try:
-            iat = int(cast(NumericClaim, iat_source))
+            iat: int = int(cast(NumericClaim, iat_source))
         except (TypeError, ValueError) as exc:
             if iat_source is _MISSING:
                 raise InvalidClaimError("iat claim is required") from exc
@@ -124,7 +126,7 @@ class UserJWTVerifier(JWTVerifier):
         # nbf prevents use before the token becomes active.
         nbf_source: Any = claims.get("nbf", _MISSING)
         try:
-            nbf = int(cast(NumericClaim, nbf_source))
+            nbf: int = int(cast(NumericClaim, nbf_source))
         except (TypeError, ValueError) as exc:
             if nbf_source is _MISSING:
                 raise InvalidClaimError("nbf claim is required") from exc
@@ -135,7 +137,7 @@ class UserJWTVerifier(JWTVerifier):
         # exp bounds the token lifetime and is the final line of defense.
         exp_source: Any = claims.get("exp", _MISSING)
         try:
-            exp = int(cast(NumericClaim, exp_source))
+            exp: int = int(cast(NumericClaim, exp_source))
         except (TypeError, ValueError) as exc:
             if exp_source is _MISSING:
                 raise InvalidClaimError("exp claim is required") from exc

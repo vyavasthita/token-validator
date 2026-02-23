@@ -53,7 +53,9 @@ class UserProfile(TokenProfile):
         self._claim_validator.validate(claims)
 
         if extra_rules:
-            ClaimValidator(list(extra_rules)).validate(claims)
+            runtime_rules: list[ClaimRule] = list(extra_rules)
+            runtime_validator: ClaimValidator = ClaimValidator(runtime_rules)
+            runtime_validator.validate(claims)
 
         self._custom_validations(claims)
 

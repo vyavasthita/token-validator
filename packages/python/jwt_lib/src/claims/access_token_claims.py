@@ -94,7 +94,9 @@ class AccessTokenClaims(TrustedClaims):
         Returns:
             True if all required scopes are present, False otherwise.
         """
-        return set(required_scopes).issubset(set(self.scopes))
+        required: set[str] = set(required_scopes)
+        token_scopes: set[str] = set(self.scopes)
+        return required.issubset(token_scopes)
 
     def has_any_scope(self, scopes: list[str]) -> bool:
         """
@@ -106,4 +108,6 @@ class AccessTokenClaims(TrustedClaims):
         Returns:
             True if at least one scope is present, False otherwise.
         """
-        return bool(set(scopes) & set(self.scopes))
+        requested: set[str] = set(scopes)
+        token_scopes: set[str] = set(self.scopes)
+        return bool(requested & token_scopes)

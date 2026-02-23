@@ -46,14 +46,16 @@ class Auth0Profile(TokenProfile):
         self._claim_validator.validate(claims)
 
         if extra_rules:
-            ClaimValidator(list(extra_rules)).validate(claims)
+            runtime_rules: list[ClaimRule] = list(extra_rules)
+            runtime_validator: ClaimValidator = ClaimValidator(runtime_rules)
+            runtime_validator.validate(claims)
 
         self._custom_validations(claims)
 
     def _custom_validations(self, claims: TrustedClaims) -> None:
         """Validate optional app name claim."""
         if self.expected_app_name:
-            actual_app = claims.get("appName")
+            actual_app: str | None = claims.get("appName")
             
             if actual_app != self.expected_app_name:
                 raise InvalidClaimError(

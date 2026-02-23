@@ -19,6 +19,7 @@ from jwt_lib.src.authenticator import (
     Auth0Authenticator,
     UserAuthenticator,
 )
+from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.validation import RequireScopes
 from jwt_lib.src.exceptions import (
     AlgorithmNotAllowedError,
@@ -96,17 +97,20 @@ async def demo_auth0_token_validation() -> None:
     print("DEMO 3: Auth0 Client Code Using Real Token")
     print("=" * 70)
 
-    scope_rules = RequireScopes(["update:core"])
+    scope_rules: RequireScopes = RequireScopes(["update:core"])
 
     try:
-        authenticator = Auth0Authenticator(
+        authenticator: Auth0Authenticator = Auth0Authenticator(
             issuer=os.getenv("AUTH_0_ISSUER", ""),
             jwks_host=os.getenv("AUTH_0_JWKS_HOST", ""),
             audience=os.getenv("AUTH_0_AUDIENCE"),
             profile_kwargs={"app_name": "lmr-db-client"}
         )
 
-        claims = await authenticator.validate(os.getenv("AUTH_0_TOKEN", ""), extra_rules=[scope_rules])
+        claims: TrustedClaims = await authenticator.validate(
+            os.getenv("AUTH_0_TOKEN", ""),
+            extra_rules=[scope_rules],
+        )
         print("\n✓ Signature + standard claims validated via Auth0JWTVerifier")
         print("✓ Auth0 profile validation passed (grant type, appName, azp, optional scopes)")
     except (
@@ -132,13 +136,13 @@ async def demo_user_token() -> None:
     print("=" * 70)
 
     try:
-        authenticator = UserAuthenticator(
+        authenticator: UserAuthenticator = UserAuthenticator(
             issuer=os.getenv("AUTH_USER_ISSUER", ""),
             jwks_host=os.getenv("AUTH_USER_JWKS_HOST", ""),
             audience=os.getenv("AUTH_USER_AUDIENCE"),
         )
 
-        claims = await authenticator.validate(os.getenv("AUTH_TOKEN", ""))
+        claims: TrustedClaims = await authenticator.validate(os.getenv("AUTH_TOKEN", ""))
         print("\n✓ Step 1: Signature + standard claims validated via UserJWTVerifier")
         print(f"✓ Step 2: Profile validated ({authenticator.profile.profile_name})")
     except (
@@ -164,10 +168,9 @@ async def main() -> None:
     print("#  JWT Library Demo - Profile-Based Architecture")
     print("#" * 70)
 
-    # await demo_architecture_summary()
-    # await demo_auth0_token_validation()
+    await demo_architecture_summary()
+    await demo_auth0_token_validation()
     await demo_user_token()
-    
 
     print("\n" + "=" * 70)
     print("Demo complete!")

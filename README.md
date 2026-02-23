@@ -1,48 +1,10 @@
 # jwt_lib
 JWT Token Validation library.
 
-## Architecture:
+## Documentation
 
-Tokens flow through four simple roles:
+- Architecture overview: [packages/python/docs/architecture.md](packages/python/docs/architecture.md)
 
-1. **`JWTVerifier` hierarchy (cryptographic trust)** — the abstract base wires JWKS and shared signature validation, while concrete implementations (`Auth0JWTVerifier`, `UserJWTVerifier`) enforce token-family-specific header/temporal policies before producing `TrustedClaims`. These concrete verifiers now live in [packages/python/jwt_lib/src/verifier/auth0_verifier.py](packages/python/jwt_lib/src/verifier/auth0_verifier.py) and [packages/python/jwt_lib/src/verifier/user_verifier.py](packages/python/jwt_lib/src/verifier/user_verifier.py) respectively, keeping each module focused on a single class.
-
-2. **`TokenProfile` (business rules)** — defines which domain rules apply to the trusted claims (e.g., `tokenType`, `principalType`, workspace/model requirements) and when to run them. Profiles can also accept extra runtime rules (scopes, entitlements) supplied by callers.
-
-3. **`ClaimValidator` (rule engine)** — executes the ordered list of `ClaimRule` objects for a profile and any extra rules, handling short-circuiting and consistent error reporting so profiles don’t repeat that plumbing.
-
-4. **`Authenticator` (orchestration)** — pairs a verifier with a profile so clients call a single `validate()`; helper builders in `jwt_lib.src.authenticator` hide issuer/audience/JWKS wiring for common token flavors while still allowing overrides.
-
-Keeping the responsibilities separate keeps the crypto path minimal, allows new token flavors without touching the verifier, and keeps tests focused (integration for the verifier, fast unit tests for each profile/rule set).
-
-### Verifier module + test layout
-
-- Auth0 verifier logic: [packages/python/jwt_lib/src/verifier/auth0_verifier.py](packages/python/jwt_lib/src/verifier/auth0_verifier.py)
-- User verifier logic: [packages/python/jwt_lib/src/verifier/user_verifier.py](packages/python/jwt_lib/src/verifier/user_verifier.py)
-- Auth0 verifier tests: [packages/python/jwt_lib/tests/verifier/test_auth0_verifier.py](packages/python/jwt_lib/tests/verifier/test_auth0_verifier.py)
-- User verifier tests: [packages/python/jwt_lib/tests/verifier/test_user_verifier.py](packages/python/jwt_lib/tests/verifier/test_user_verifier.py)
-
-## Test the lib independently
-
-### Go to packages/python
-```bash
-cd packages/python
-```
-
-### Install Packages
-```bash
-poetry install
-```
-
-### Running tests
-```bash
-poetry run pytest
-```
-
-### Running the demo script
-```bash
-poetry run python main.py
-```
 
 **Usage as lib in another service**
 
@@ -60,4 +22,72 @@ authenticator = UserAuthenticator(
 )
 
 claims = await authenticator.validate(token)  # UserJWTVerifier + UserProfile run together
+```
+
+### TrustedClaims object
+`validate()` returns a `TrustedClaims` instance (see [packages/python/jwt_lib/src/claims/trusted_claims.py](packages/python/jwt_lib/src/claims/trusted_claims.py)). It behaves like a read-only dict and offers convenience properties:
+
+- `claims.subject` → `sub`
+- `claims.issuer` → `iss`
+- `claims.audience` → `aud` (string or list)
+- `claims.expiration` → `exp` (Unix timestamp)
+- `claims.issued_at` → `iat`
+- `claims.not_before` → `nbf`
+- `claims.jwt_id` → `jti`
+- `claims.headers` → copy of the JOSE header
+- `claims.get_header("kid")` → header helper
+- `claims.to_dict()` → shallow copy of all claims
+
+It also implements `Mapping`, so `claims["custom"]` and `claims.get("custom")` work for domain-specific fields.
+
+**Test the lib independently**
+
+### Go to packages/python
+```bash
+cd packages/python
+```
+
+### Install Packages
+```bash
+poetry install
+```
+
+### Running tests
+```bash
+poetry run pytest
+```
+
+**Running the demo script**
+
+- The demo expects live tokens provided via environment variables. 
+- Export the set that matches the token type you want to validate, then run the script.
+
+#### User Token Demo (In `main.py`)
+- `AUTH_USER_ISSUER` – Issuer URL (must match the `iss` claim including trailing slash).
+- `AUTH_USER_JWKS_HOST` – Host that serves the JWKS document.
+- `AUTH_USER_AUDIENCE` – Audience string expected in the token (optional if your tokens omit `aud`).
+- `AUTH_TOKEN` – Encoded JWT to validate.
+
+Example:
+```bash
+export AUTH_USER_ISSUER="https://login.example.com/"
+export AUTH_USER_JWKS_HOST="https://login.example.com/"
+export AUTH_USER_AUDIENCE="my-first-party-app"
+export AUTH_TOKEN="<jwt here>"
+poetry run python main.py
+```
+
+#### Auth0 Token Demo (In `main.py`)
+- `AUTH_0_ISSUER` – Auth0 issuer URL (e.g., `https://tenant.auth0.com/`).
+- `AUTH_0_JWKS_HOST` – Hostname that exposes the JWKS set (usually same as issuer).
+- `AUTH_0_AUDIENCE` – API audience configured in Auth0.
+- `AUTH_0_TOKEN` – Encoded Auth0 access token.
+
+Example:
+```bash
+export AUTH_0_ISSUER="https://tenant.auth0.com/"
+export AUTH_0_JWKS_HOST="https://tenant.auth0.com/"
+export AUTH_0_AUDIENCE="https://api.example.com"
+export AUTH_0_TOKEN="<jwt here>"
+poetry run python main.py
 ```

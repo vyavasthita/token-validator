@@ -48,7 +48,7 @@ class RequireScopes(ClaimRule):
         Args:
             scopes: List of scope strings that must all be present.
         """
-        self.required_scopes = set(scopes)
+        self.required_scopes: set[str] = set(scopes)
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -60,8 +60,9 @@ class RequireScopes(ClaimRule):
         Raises:
             PermissionDeniedError: If any required scope is missing.
         """
-        scope_str = claims.get("scope", "")
-        token_scopes = set(scope_str.split()) if scope_str else set()
+        scope_value: Any = claims.get("scope", "")
+        scope_str: str = scope_value if isinstance(scope_value, str) else ""
+        token_scopes: set[str] = set(scope_str.split()) if scope_str else set()
 
         if not self.required_scopes.issubset(token_scopes):
             raise PermissionDeniedError(
@@ -81,7 +82,7 @@ class RequireAnyScope(ClaimRule):
         Args:
             scopes: List of scope strings, at least one must be present.
         """
-        self.acceptable_scopes = set(scopes)
+        self.acceptable_scopes: set[str] = set(scopes)
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -93,8 +94,9 @@ class RequireAnyScope(ClaimRule):
         Raises:
             PermissionDeniedError: If none of the acceptable scopes are present.
         """
-        scope_str = claims.get("scope", "")
-        token_scopes = set(scope_str.split()) if scope_str else set()
+        scope_value: Any = claims.get("scope", "")
+        scope_str: str = scope_value if isinstance(scope_value, str) else ""
+        token_scopes: set[str] = set(scope_str.split()) if scope_str else set()
 
         if not (self.acceptable_scopes & token_scopes):
             raise PermissionDeniedError(
@@ -117,7 +119,7 @@ class RequireGrantType(ClaimRule):
         Args:
             expected_grant_type: The expected value of the 'gty' claim.
         """
-        self.expected = expected_grant_type
+        self.expected: str = expected_grant_type
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -129,7 +131,7 @@ class RequireGrantType(ClaimRule):
         Raises:
             InvalidClaimError: If the grant type does not match.
         """
-        actual = claims.get("gty")
+        actual: str | None = claims.get("gty")
         
         if actual != self.expected:
             raise InvalidClaimError(
@@ -150,8 +152,8 @@ class RequireClaim(ClaimRule):
             claim_name: The name of the claim that must be present.
             expected_value: If provided, the claim must equal this value.
         """
-        self.claim_name = claim_name
-        self.expected_value = expected_value
+        self.claim_name: str = claim_name
+        self.expected_value: Any | None = expected_value
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -167,7 +169,7 @@ class RequireClaim(ClaimRule):
             raise InvalidClaimError(f"Required claim '{self.claim_name}' is missing")
 
         if self.expected_value is not None:
-            actual = claims.get(self.claim_name)
+            actual: Any = claims.get(self.claim_name)
             if actual != self.expected_value:
                 raise InvalidClaimError(
                     f"Claim '{self.claim_name}' expected '{self.expected_value}', got '{actual}'"
@@ -186,7 +188,7 @@ class RequireSubject(ClaimRule):
         Args:
             expected_subject: The expected value of the 'sub' claim.
         """
-        self.expected_subject = expected_subject
+        self.expected_subject: str = expected_subject
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -198,7 +200,7 @@ class RequireSubject(ClaimRule):
         Raises:
             InvalidClaimError: If the subject does not match.
         """
-        actual = claims.get("sub")
+        actual: str | None = claims.get("sub")
         if actual != self.expected_subject:
             raise InvalidClaimError(
                 f"Expected subject '{self.expected_subject}', got '{actual}'"
@@ -220,8 +222,8 @@ class RequireClaimIn(ClaimRule):
             claim_name: The name of the claim to validate.
             allowed_values: List of acceptable values for the claim.
         """
-        self.claim_name = claim_name
-        self.allowed_values = set(allowed_values)
+        self.claim_name: str = claim_name
+        self.allowed_values: set[Any] = set(allowed_values)
 
     def validate(self, claims: TrustedClaims) -> None:
         """
@@ -236,7 +238,7 @@ class RequireClaimIn(ClaimRule):
         if self.claim_name not in claims:
             raise InvalidClaimError(f"Required claim '{self.claim_name}' is missing")
 
-        actual = claims.get(self.claim_name)
+        actual: Any = claims.get(self.claim_name)
         if actual not in self.allowed_values:
             raise InvalidClaimError(
                 f"Claim '{self.claim_name}' value '{actual}' not in allowed values: "

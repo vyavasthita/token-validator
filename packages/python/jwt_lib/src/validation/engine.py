@@ -61,4 +61,5 @@ class ClaimValidator:
             JWTError: If any rule fails validation.
         """
         for rule in self._rules:
-            rule.validate(claims)
+            active_rule: ClaimRule = rule
+            active_rule.validate(claims)
