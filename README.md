@@ -61,6 +61,11 @@ poetry run pytest
 
 - The demo expects live tokens provided via environment variables. 
 - Export the set that matches the token type you want to validate, then run the script.
+- The script now exposes a CLI so each demo can be run independently. Use `poetry run python main.py --help` to see all options:
+	- `--architecture` renders the layered design walkthrough.
+	- `--auth0` runs only the Auth0 token validation demo.
+	- `--user` runs only the first-party user token demo.
+	- `--all` (or no flags) runs every demo in sequence.
 
 #### User Token Demo (In `main.py`)
 - `AUTH_USER_ISSUER` – Issuer URL (must match the `iss` claim including trailing slash).
@@ -68,13 +73,13 @@ poetry run pytest
 - `AUTH_USER_AUDIENCE` – Audience string expected in the token (optional if your tokens omit `aud`).
 - `AUTH_TOKEN` – Encoded JWT to validate.
 
-Example:
+Example (run only the user demo after setting variables):
 ```bash
 export AUTH_USER_ISSUER="https://login.example.com/"
 export AUTH_USER_JWKS_HOST="https://login.example.com/"
 export AUTH_USER_AUDIENCE="my-first-party-app"
 export AUTH_TOKEN="<jwt here>"
-poetry run python main.py
+poetry run python main.py --user
 ```
 
 #### Auth0 Token Demo (In `main.py`)
@@ -83,11 +88,11 @@ poetry run python main.py
 - `AUTH_0_AUDIENCE` – API audience configured in Auth0.
 - `AUTH_0_TOKEN` – Encoded Auth0 access token.
 
-Example:
+Example (Auth0-only run):
 ```bash
 export AUTH_0_ISSUER="https://tenant.auth0.com/"
 export AUTH_0_JWKS_HOST="https://tenant.auth0.com/"
 export AUTH_0_AUDIENCE="https://api.example.com"
 export AUTH_0_TOKEN="<jwt here>"
-poetry run python main.py
+poetry run python main.py --auth0
 ```

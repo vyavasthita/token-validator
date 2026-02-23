@@ -1,17 +1,6 @@
-"""
-JWT Library Demo.
+"""JWT Library demo runner with simple CLI argument parsing."""
 
-This script demonstrates the jwt_lib architecture for validating JWT tokens.
-It showcases:
-1. Separation of concerns: User/Auth0 JWTVerifiers (crypto) vs TokenProfile (business logic)
-2. Predefined profiles for User and Auth0 tokens
-3. Optional scope validation using RequireScopes
-4. Error handling
-
-Architecture:
-    Token → (Auth0|User)JWTVerifier (signature, exp, iss, aud) → TrustedClaims → TokenProfile (business rules)
-"""
-
+import argparse
 import asyncio
 import os
 
@@ -162,15 +151,68 @@ async def demo_user_token() -> None:
         print(f"✗ Unexpected error: {error}")
 
 
-async def main() -> None:
-    """Run all demos."""
+def build_parser() -> argparse.ArgumentParser:
+    """Construct the CLI parser for selecting demos."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run one or more JWT library demos. Leave all flags unset to run everything."
+        ),
+        add_help=False,
+    )
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        help="Show this help message and exit.",
+    )
+    parser.add_argument(
+        "--architecture",
+        action="store_true",
+        help="Run the architecture overview demo.",
+    )
+    parser.add_argument(
+        "--auth0",
+        action="store_true",
+        help="Run the Auth0 token validation demo.",
+    )
+    parser.add_argument(
+        "--user",
+        action="store_true",
+        help="Run the first-party user token validation demo.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run every demo (default when no specific flag is provided).",
+    )
+    return parser
+
+
+def selected_demos(args: argparse.Namespace) -> list[str]:
+    """Translate CLI flags into the demos that should run."""
+    mapping = {
+        "architecture": args.architecture,
+        "auth0": args.auth0,
+        "user": args.user,
+    }
+    chosen = [name for name, enabled in mapping.items() if enabled]
+    if args.all or not chosen:
+        return list(mapping.keys())
+    return chosen
+
+
+async def main(demos_to_run: list[str]) -> None:
+    """Run requested demos in order."""
     print("\n" + "#" * 70)
     print("#  JWT Library Demo - Profile-Based Architecture")
     print("#" * 70)
 
-    await demo_architecture_summary()
-    await demo_auth0_token_validation()
-    await demo_user_token()
+    if "architecture" in demos_to_run:
+        await demo_architecture_summary()
+    if "auth0" in demos_to_run:
+        await demo_auth0_token_validation()
+    if "user" in demos_to_run:
+        await demo_user_token()
 
     print("\n" + "=" * 70)
     print("Demo complete!")
@@ -178,4 +220,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    cli_args = build_parser().parse_args()
+    asyncio.run(main(selected_demos(cli_args)))
