@@ -6,6 +6,7 @@ import logging
 from typing import Iterable
 
 from jwt_lib.src.claims import TrustedClaims
+from jwt_lib.src.exceptions import JWTError
 from jwt_lib.src.profiles import TokenProfile, UserProfile
 from jwt_lib.src.verifier import JWTVerifier, UserJWTVerifier
 from jwt_lib.src.validation import ClaimRule
@@ -86,6 +87,16 @@ class UserAuthenticator(Authenticator):
                 "UserProfile validation passed profile=%s", self.profile.profile_name
             )
             return claims
+        except JWTError as error:
+            logger.warning(
+                "UserAuthenticator validation failed for issuer=%s: %s",
+                self.issuer,
+                error,
+            )
+            raise
         except Exception:
-            logger.exception("UserAuthenticator validation failed for issuer=%s", self.issuer)
+            logger.exception(
+                "UserAuthenticator encountered unexpected error issuer=%s",
+                self.issuer,
+            )
             raise

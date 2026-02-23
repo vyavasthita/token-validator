@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import logging
 import os
 
 from jwt_lib.src.authenticator import (
@@ -27,13 +28,15 @@ from jwt_lib.src.exceptions import (
 # Demo Functions
 # =============================================================================
 
+logger = logging.getLogger("jwt_lib.demo")
+
 async def demo_architecture_summary() -> None:
     """Explain how auth0_verifier.py and user_verifier.py fit into the layered pipeline."""
-    print("\n" + "=" * 70)
-    print("ARCHITECTURE SUMMARY")
-    print("=" * 70)
+    logger.info("\n%s", "=" * 70)
+    logger.info("ARCHITECTURE SUMMARY")
+    logger.info("%s", "=" * 70)
 
-    print("""
+    logger.info("""
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        RECOMMENDED DESIGN                           │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -82,9 +85,9 @@ async def demo_architecture_summary() -> None:
 
 async def demo_auth0_token_validation() -> None:
     """Demo: Validating a real Auth0 token supplied via environment variable."""
-    print("\n" + "=" * 70)
-    print("DEMO 3: Auth0 Client Code Using Real Token")
-    print("=" * 70)
+    logger.info("\n%s", "=" * 70)
+    logger.info("DEMO 3: Auth0 Client Code Using Real Token")
+    logger.info("%s", "=" * 70)
 
     scope_rules: RequireScopes = RequireScopes(["update:core"])
 
@@ -100,8 +103,8 @@ async def demo_auth0_token_validation() -> None:
             os.getenv("AUTH_0_TOKEN", ""),
             extra_rules=[scope_rules],
         )
-        print("\n✓ Signature + standard claims validated via Auth0JWTVerifier")
-        print("✓ Auth0 profile validation passed (grant type, appName, azp, optional scopes)")
+        logger.info("\n✓ Signature + standard claims validated via Auth0JWTVerifier")
+        logger.info("✓ Auth0 profile validation passed (grant type, appName, azp, optional scopes)")
     except (
         AlgorithmNotAllowedError,
         ExpiredTokenError,
@@ -114,15 +117,15 @@ async def demo_auth0_token_validation() -> None:
         MissingClaimError,
         PermissionDeniedError,
     ) as error:
-        print(str(error))
+        logger.error("%s", error)
     except Exception as error:
-        print(f"✗ Unexpected error: {error}")
+        logger.exception("✗ Unexpected error: %s", error)
         
 async def demo_user_token() -> None:
     """Demo: Validating live User Tokens."""
-    print("\n" + "=" * 70)
-    print("DEMO 1: User Token Validation (Real Token)")
-    print("=" * 70)
+    logger.info("\n%s", "=" * 70)
+    logger.info("DEMO 1: User Token Validation (Real Token)")
+    logger.info("%s", "=" * 70)
 
     try:
         authenticator: UserAuthenticator = UserAuthenticator(
@@ -132,8 +135,8 @@ async def demo_user_token() -> None:
         )
 
         claims: TrustedClaims = await authenticator.validate(os.getenv("AUTH_TOKEN", ""))
-        print("\n✓ Step 1: Signature + standard claims validated via UserJWTVerifier")
-        print(f"✓ Step 2: Profile validated ({authenticator.profile.profile_name})")
+        logger.info("\n✓ Step 1: Signature + standard claims validated via UserJWTVerifier")
+        logger.info("✓ Step 2: Profile validated (%s)", authenticator.profile.profile_name)
     except (
         AlgorithmNotAllowedError,
         ExpiredTokenError,
@@ -146,9 +149,9 @@ async def demo_user_token() -> None:
         MissingClaimError,
         PermissionDeniedError,
     ) as error:
-        print(str(error))
+        logger.error("%s", error)
     except Exception as error:
-        print(f"✗ Unexpected error: {error}")
+        logger.exception("✗ Unexpected error: %s", error)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -203,9 +206,9 @@ def selected_demos(args: argparse.Namespace) -> list[str]:
 
 async def main(demos_to_run: list[str]) -> None:
     """Run requested demos in order."""
-    print("\n" + "#" * 70)
-    print("#  JWT Library Demo - Profile-Based Architecture")
-    print("#" * 70)
+    logger.info("\n%s", "#" * 70)
+    logger.info("#  JWT Library Demo - Profile-Based Architecture")
+    logger.info("%s", "#" * 70)
 
     if "architecture" in demos_to_run:
         await demo_architecture_summary()
@@ -214,11 +217,12 @@ async def main(demos_to_run: list[str]) -> None:
     if "user" in demos_to_run:
         await demo_user_token()
 
-    print("\n" + "=" * 70)
-    print("Demo complete!")
-    print("=" * 70 + "\n")
+    logger.info("\n%s", "=" * 70)
+    logger.info("Demo complete!")
+    logger.info("%s\n", "=" * 70)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     cli_args = build_parser().parse_args()
     asyncio.run(main(selected_demos(cli_args)))
