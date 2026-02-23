@@ -15,11 +15,17 @@ from jwt_lib.src.exceptions import InvalidClaimError
 
 USER_DEFAULT_ISSUER = "https://auth.example.test/"
 USER_DEFAULT_JWKS_HOST = USER_DEFAULT_ISSUER
+AUTH0_DEFAULT_ISSUER = "https://auth.example.com/"
+AUTH0_DEFAULT_JWKS_HOST = AUTH0_DEFAULT_ISSUER
 
 
 class _StubVerifier(JWTVerifier):
     def __init__(self, claims: TrustedClaims) -> None:
-        super().__init__(issuer="https://stub.example/", audience=None)
+        super().__init__(
+            issuer="https://stub.example/",
+            jwks_host="https://stub.example/",
+            audience=None,
+        )
         self.claims = claims
         self.tokens: list[str] = []
 
@@ -135,16 +141,19 @@ def test_user_authenticator_uses_defaults():
 
 def test_auth0_authenticator_uses_defaults():
     authenticator = Auth0Authenticator(
-        issuer="https://auth.example.com/",
+        issuer=AUTH0_DEFAULT_ISSUER,
+        jwks_host=AUTH0_DEFAULT_JWKS_HOST,
         audience="https://api.example.com",
         profile_kwargs={"app_name": "svc-app"},
     )
 
     verifier = authenticator.verifier
-    assert verifier.issuer == "https://auth.example.com/"
+    assert verifier.issuer == AUTH0_DEFAULT_ISSUER
     assert verifier.audience == "https://api.example.com"
     assert verifier.allowed_algorithms == {"RS256"}
     assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
+
+    assert authenticator.jwks_host == AUTH0_DEFAULT_JWKS_HOST
 
     profile = authenticator.profile
     assert isinstance(profile, Auth0Profile)
@@ -154,8 +163,19 @@ def test_auth0_authenticator_uses_defaults():
 def test_auth0_authenticator_handles_issuer_without_slash():
     authenticator = Auth0Authenticator(
         issuer="https://auth.example.com",
+        jwks_host="https://auth.example.com",
     )
 
     verifier = authenticator.verifier
-    assert verifier.issuer == "https://auth.example.com/"
+    assert verifier.issuer == "https://auth.example.com"
     assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
+
+
+def test_auth0_authenticator_supports_custom_jwks_host():
+    authenticator = Auth0Authenticator(
+        issuer=AUTH0_DEFAULT_ISSUER,
+        jwks_host="https://keys.example.net",
+    )
+
+    verifier = authenticator.verifier
+    assert verifier.jwks_uri == "https://keys.example.net/token/.well-known/jwks.json"

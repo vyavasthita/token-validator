@@ -16,12 +16,14 @@ class Auth0JWTVerifier(JWTVerifier):
     def __init__(
         self,
         issuer: str,
+        jwks_host: str,
         audience: str | None = None,
         allowed_algorithms: Iterable[str] | None = None,
         required_claims: list[str] | None = None,
     ) -> None:
         super().__init__(
             issuer=issuer,
+            jwks_host=jwks_host,
             audience=audience,
             allowed_algorithms=allowed_algorithms or DEFAULT_AUTH0_ALLOWED_ALGORITHMS,
             required_claims=required_claims,

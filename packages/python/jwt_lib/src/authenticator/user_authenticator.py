@@ -35,9 +35,9 @@ class UserAuthenticator(Authenticator):
     def _create_verifier(self) -> JWTVerifier:
         return UserJWTVerifier(
             issuer=self.issuer,
+            jwks_host=self.jwks_host,
             audience=self.audience,
             allowed_algorithms=self.allowed_algorithms,
-            jwks_host=self.jwks_host,
         )
 
     def _create_profile(self) -> TokenProfile:

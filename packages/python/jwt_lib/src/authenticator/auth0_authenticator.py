@@ -19,12 +19,14 @@ class Auth0Authenticator(Authenticator):
     def __init__(
         self,
         issuer: str,
+        jwks_host: str,
         audience: str | None = None,
         allowed_algorithms: Iterable[str] | None = None,
         profile_kwargs: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.issuer = issuer
+        self.jwks_host = jwks_host
         self.audience = audience
         self.allowed_algorithms = list(allowed_algorithms or DEFAULT_AUTH0_ALLOWED_ALGORITHMS)
         self.profile_kwargs = dict(profile_kwargs or {})
@@ -35,6 +37,7 @@ class Auth0Authenticator(Authenticator):
     def _create_verifier(self) -> JWTVerifier:
         return Auth0JWTVerifier(
             issuer=self.issuer,
+            jwks_host=self.jwks_host,
             audience=self.audience,
             allowed_algorithms=self.allowed_algorithms,
         )

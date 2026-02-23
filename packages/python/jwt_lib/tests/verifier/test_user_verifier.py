@@ -46,7 +46,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         claims = await verifier.validate(token)
@@ -74,7 +78,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="kid"):
@@ -101,7 +109,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="typ"):
@@ -133,6 +145,7 @@ class TestUserJWTVerifier:
 
         verifier = UserJWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
             clock_skew_seconds=30,
         )
@@ -165,7 +178,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="nbf"):
@@ -200,6 +217,7 @@ class TestUserJWTVerifier:
 
         verifier = UserJWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
             max_token_age_seconds=60,
         )

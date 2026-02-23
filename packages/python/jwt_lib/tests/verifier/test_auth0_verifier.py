@@ -26,31 +26,36 @@ class TestAuth0JWTVerifierInitialization:
     def test_default_algorithm(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
         assert "RS256" in verifier.allowed_algorithms
 
     def test_custom_algorithms(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             allowed_algorithms=["RS256", "RS384"],
         )
         assert verifier.allowed_algorithms == {"RS256", "RS384"}
 
-    def test_normalizes_issuer(self):
+    def test_preserves_issuer_string(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com",
+            jwks_host="https://auth.example.com",
         )
-        assert verifier.issuer.endswith("/")
+        assert verifier.issuer == "https://auth.example.com"
 
     def test_default_required_claims(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
-        assert {"exp", "iss", "sub"}.issubset(set(verifier.required_claims))
+        assert {"exp", "iss", "sub"}.issubset(verifier.required_claims)
 
     def test_audience_adds_aud_to_required(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             audience="my-api",
         )
         assert "aud" in verifier.required_claims
@@ -58,15 +63,39 @@ class TestAuth0JWTVerifierInitialization:
     def test_custom_required_claims(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             required_claims=["exp", "custom"],
         )
         assert "custom" in verifier.required_claims
 
-    def test_derives_jwks_uri_when_not_provided(self):
+    def test_builds_default_jwks_uri(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
         assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
+
+    def test_accepts_custom_jwks_host(self):
+        verifier = Auth0JWTVerifier(
+            issuer="https://auth.example.com/",
+            jwks_host="https://keys.example.net",
+        )
+        assert verifier.jwks_uri == "https://keys.example.net/token/.well-known/jwks.json"
+
+    def test_trims_trailing_slashes_on_jwks_host(self):
+        verifier = Auth0JWTVerifier(
+            issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com///",
+        )
+        assert verifier.jwks_host == "https://auth.example.com"
+
+    def test_allows_empty_issuer(self):
+        verifier = Auth0JWTVerifier(issuer="", jwks_host="https://auth.example.com")
+        assert verifier.issuer == ""
+
+    def test_allows_empty_jwks_host(self):
+        verifier = Auth0JWTVerifier(issuer="https://auth.example.com/", jwks_host="")
+        assert verifier.jwks_uri == "/token/.well-known/jwks.json"
 
 
 class TestAuth0JWTVerifierValidation:
@@ -96,6 +125,7 @@ class TestAuth0JWTVerifierValidation:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -133,6 +163,7 @@ class TestAuth0JWTVerifierValidation:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -175,6 +206,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -213,6 +245,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -245,6 +278,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=wrong_issuer,
+            jwks_host=wrong_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -275,6 +309,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience="wrong-audience",
         )
         verifier._jwks_client = mock_jwks_client
@@ -299,6 +334,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
             allowed_algorithms=["RS384"],
         )
@@ -316,6 +352,7 @@ class TestAuth0JWTVerifierErrors:
     ):
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
 
@@ -341,6 +378,7 @@ class TestAuth0JWTVerifierErrors:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
@@ -380,9 +418,11 @@ class TestAuth0JWTVerifierWithoutAudience:
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=None,
         )
         verifier._jwks_client = mock_jwks_client
 
-        result = await verifier.validate(token)
-
-        assert result.subject == "user123"
+        claims_obj = await verifier.validate(token)
+        assert isinstance(claims_obj, TrustedClaims)
+        assert claims_obj.subject == "user123"

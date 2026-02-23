@@ -37,13 +37,13 @@ class JWTVerifier(ABC):
     def __init__(
         self,
         issuer: str,
+        jwks_host: str,
         audience: str | None = None,
         allowed_algorithms: Iterable[str] | None = None,
         required_claims: list[str] | None = None,
-        jwks_host: str | None = None,
     ) -> None:
-        self._issuer = issuer
-        self._jwks_host = (jwks_host or issuer).rstrip("/")
+        self.issuer = issuer
+        self.jwks_host = jwks_host
         self.audience = audience
         self.allowed_algorithms = set(allowed_algorithms or self.DEFAULT_ALLOWED_ALGORITHMS)
         self.required_claims = list(required_claims or self.DEFAULT_REQUIRED_CLAIMS)

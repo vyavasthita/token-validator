@@ -8,75 +8,96 @@ import pytest
 from jwt import PyJWKClient
 
 from jwt_lib.src.claims import TrustedClaims
-from jwt_lib.src.verifier import Auth0JWTVerifier, UserJWTVerifier
 from jwt_lib.src.exceptions import (
-    InvalidTokenError,
-    InvalidClaimError,
-    ExpiredTokenError,
-    TokenNotYetValidError,
-    InvalidIssuerError,
-    InvalidAudienceError,
     AlgorithmNotAllowedError,
+    ExpiredTokenError,
+    InvalidAudienceError,
+    InvalidClaimError,
+    InvalidIssuerError,
+    InvalidTokenError,
     SigningKeyNotFoundError,
+    TokenNotYetValidError,
 )
-
+from jwt_lib.src.verifier import Auth0JWTVerifier, UserJWTVerifier
 from jwt_lib.tests.conftest import create_token
+
 
 class TestAuth0JWTVerifierInitialization:
     """Tests for Auth0JWTVerifier initialization."""
 
     def test_default_algorithm(self):
-        """Test default algorithm is RS256."""
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
         assert "RS256" in verifier.allowed_algorithms
 
     def test_custom_algorithms(self):
-        """Test custom allowed algorithms."""
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             allowed_algorithms=["RS256", "RS384"],
         )
         assert verifier.allowed_algorithms == {"RS256", "RS384"}
 
-    def test_normalizes_issuer(self):
-        """Test issuer is normalized with trailing slash."""
+    def test_preserves_issuer_string(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com",
+            jwks_host="https://auth.example.com",
         )
+        assert verifier.issuer == "https://auth.example.com"
 
     def test_default_required_claims(self):
-        """Test default required claims."""
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
-        assert "exp" in verifier.required_claims
-        assert "iss" in verifier.required_claims
-        assert "sub" in verifier.required_claims
+        assert {"exp", "iss", "sub"}.issubset(verifier.required_claims)
 
     def test_audience_adds_aud_to_required(self):
-        """Test that specifying audience adds aud to required claims."""
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             audience="my-api",
         )
         assert "aud" in verifier.required_claims
 
     def test_custom_required_claims(self):
-        """Test custom required claims."""
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
             required_claims=["exp", "custom"],
         )
         assert "custom" in verifier.required_claims
 
-    def test_derives_jwks_uri_when_not_provided(self):
-        """If jwks_uri is omitted, it should follow well-known path."""
+    def test_builds_default_jwks_uri(self):
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com/",
         )
         assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
+
+    def test_accepts_custom_jwks_host(self):
+        verifier = Auth0JWTVerifier(
+            issuer="https://auth.example.com/",
+            jwks_host="https://keys.example.net",
+        )
+        assert verifier.jwks_uri == "https://keys.example.net/token/.well-known/jwks.json"
+
+    def test_trims_trailing_slashes_on_jwks_host(self):
+        verifier = Auth0JWTVerifier(
+            issuer="https://auth.example.com/",
+            jwks_host="https://auth.example.com///",
+        )
+        assert verifier.jwks_host == "https://auth.example.com"
+
+    def test_allows_empty_issuer(self):
+        verifier = Auth0JWTVerifier(issuer="", jwks_host="https://auth.example.com")
+        assert verifier.issuer == ""
+
+    def test_allows_empty_jwks_host(self):
+        verifier = Auth0JWTVerifier(issuer="https://auth.example.com/", jwks_host="")
+        assert verifier.jwks_uri == "/token/.well-known/jwks.json"
 
 
 class TestAuth0JWTVerifierValidation:
@@ -91,32 +112,28 @@ class TestAuth0JWTVerifierValidation:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test verification of a valid token."""
         _, public_key = rsa_key_pair
-        
-        # Create token with kid
+
         token = create_token(
             base_claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
-        # Inject mock client
         verifier._jwks_client = mock_jwks_client
-        
+
         claims = await verifier.validate(token)
-        
+
         assert isinstance(claims, TrustedClaims)
         assert claims.subject == "user123"
         assert claims.issuer == test_issuer
@@ -130,7 +147,6 @@ class TestAuth0JWTVerifierValidation:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Tokens that omit trailing slash in iss should be rejected."""
         _, public_key = rsa_key_pair
 
         claims_without_slash = base_claims.copy()
@@ -144,18 +160,19 @@ class TestAuth0JWTVerifierValidation:
 
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidIssuerError):
             await verifier.validate(token)
+
 
 class TestAuth0JWTVerifierErrors:
     """Tests for JWT verification error cases."""
@@ -168,36 +185,34 @@ class TestAuth0JWTVerifierErrors:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test that expired tokens are rejected."""
         _, public_key = rsa_key_pair
-        
+
         expired_claims = {
             "iss": test_issuer,
             "aud": test_audience,
             "sub": "user123",
-            "exp": int(time.time()) - 3600,  # 1 hour ago
+            "exp": int(time.time()) - 3600,
             "iat": int(time.time()) - 7200,
         }
-        
+
         token = create_token(
             expired_claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
-        
+
         with pytest.raises(ExpiredTokenError):
             await verifier.validate(token)
 
@@ -209,36 +224,34 @@ class TestAuth0JWTVerifierErrors:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test that tokens with future nbf are rejected."""
         _, public_key = rsa_key_pair
-        
+
         future_nbf_claims = {
             "iss": test_issuer,
             "aud": test_audience,
             "sub": "user123",
             "exp": int(time.time()) + 7200,
-            "nbf": int(time.time()) + 3600,  # 1 hour from now
+            "nbf": int(time.time()) + 3600,
         }
-        
+
         token = create_token(
             future_nbf_claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
-        
+
         with pytest.raises(TokenNotYetValidError):
             await verifier.validate(token)
 
@@ -250,30 +263,28 @@ class TestAuth0JWTVerifierErrors:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test that wrong issuer is rejected."""
         _, public_key = rsa_key_pair
-        
+
         token = create_token(
-            base_claims,  # Has issuer "https://auth.example.com/"
+            base_claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         wrong_issuer = "https://wrong-issuer.com/"
-        
+
         verifier = Auth0JWTVerifier(
             issuer=wrong_issuer,
+            jwks_host=wrong_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
-        
+
         with pytest.raises(InvalidIssuerError):
             await verifier.validate(token)
 
@@ -285,28 +296,26 @@ class TestAuth0JWTVerifierErrors:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test that wrong audience is rejected."""
         _, public_key = rsa_key_pair
-        
+
         token = create_token(
-            base_claims,  # Has audience "test-api"
+            base_claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience="wrong-audience",
         )
         verifier._jwks_client = mock_jwks_client
-        
+
         with pytest.raises(InvalidAudienceError):
             await verifier.validate(token)
 
@@ -318,24 +327,23 @@ class TestAuth0JWTVerifierErrors:
         base_claims: dict,
         private_key_pem: bytes,
     ):
-        """Test that tokens with disallowed algorithm are rejected."""
-        # Create token with RS256 (default)
         token = create_token(
             base_claims,
             private_key_pem,
             algorithm="RS256",
             headers={"kid": "test-key-1"},
         )
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
-            allowed_algorithms=["RS384"],  # Only allow RS384
+            allowed_algorithms=["RS384"],
         )
-        
+
         with pytest.raises(AlgorithmNotAllowedError) as exc_info:
             await verifier.validate(token)
-        
+
         assert "RS256" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -344,12 +352,12 @@ class TestAuth0JWTVerifierErrors:
         test_issuer: str,
         test_audience: str,
     ):
-        """Test that malformed tokens are rejected."""
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
-        
+
         with pytest.raises(InvalidTokenError):
             await verifier.validate("not.a.valid.token")
 
@@ -361,23 +369,22 @@ class TestAuth0JWTVerifierErrors:
         base_claims: dict,
         private_key_pem: bytes,
     ):
-        """Test error when signing key is not in JWKS."""
         token = create_token(
             base_claims,
             private_key_pem,
             headers={"kid": "unknown-key-id"},
         )
-        
-        # Mock PyJWKClient to raise exception
+
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.side_effect = Exception("Key not found")
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
         )
         verifier._jwks_client = mock_jwks_client
-        
+
         with pytest.raises(SigningKeyNotFoundError):
             await verifier.validate(token)
 
@@ -392,38 +399,35 @@ class TestAuth0JWTVerifierWithoutAudience:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """Test verification when no audience is specified."""
         _, public_key = rsa_key_pair
-        
+
         claims = {
             "iss": test_issuer,
             "sub": "user123",
             "exp": int(time.time()) + 3600,
-            # No aud claim
         }
-        
+
         token = create_token(
             claims,
             private_key_pem,
             headers={"kid": "test-key-1"},
         )
-        
-        # Mock PyJWKClient
+
         mock_signing_key = MagicMock()
         mock_signing_key.key = public_key
-        
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
-        
+
         verifier = Auth0JWTVerifier(
             issuer=test_issuer,
-            # No audience specified
+            jwks_host=test_issuer,
+            audience=None,
         )
         verifier._jwks_client = mock_jwks_client
-        
-        result = await verifier.validate(token)
-        
-        assert result.subject == "user123"
+
+        claims_obj = await verifier.validate(token)
+        assert isinstance(claims_obj, TrustedClaims)
+        assert claims_obj.subject == "user123"
 
 
 class TestUserJWTVerifier:
@@ -447,7 +451,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """User verifiers accept well-formed tokens."""
         _, public_key = rsa_key_pair
         token = create_token(
             base_claims,
@@ -460,7 +463,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         claims = await verifier.validate(token)
@@ -476,7 +483,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """kid is required so JWKS lookups remain deterministic."""
         _, public_key = rsa_key_pair
         token = create_token(
             base_claims,
@@ -489,7 +495,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="kid"):
@@ -504,7 +514,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """typ differentiates user tokens from other JWTs."""
         _, public_key = rsa_key_pair
         token = create_token(
             base_claims,
@@ -517,7 +526,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="typ"):
@@ -532,7 +545,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """iat protects against tokens minted in the future."""
         _, public_key = rsa_key_pair
         claims = base_claims.copy()
         claims["iat"] = int(time.time()) + 300
@@ -550,6 +562,7 @@ class TestUserJWTVerifier:
 
         verifier = UserJWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
             clock_skew_seconds=30,
         )
@@ -567,7 +580,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """nbf ensures tokens cannot be replayed before activation."""
         _, public_key = rsa_key_pair
         claims = base_claims.copy()
         claims.pop("nbf", None)
@@ -583,7 +595,11 @@ class TestUserJWTVerifier:
         mock_jwks_client = MagicMock(spec=PyJWKClient)
         mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-        verifier = UserJWTVerifier(issuer=test_issuer, audience=test_audience)
+        verifier = UserJWTVerifier(
+            issuer=test_issuer,
+            jwks_host=test_issuer,
+            audience=test_audience,
+        )
         verifier._jwks_client = mock_jwks_client
 
         with pytest.raises(InvalidClaimError, match="nbf"):
@@ -598,7 +614,6 @@ class TestUserJWTVerifier:
         private_key_pem: bytes,
         rsa_key_pair,
     ):
-        """max_token_age_seconds limits how long user tokens stay valid."""
         _, public_key = rsa_key_pair
         now = int(time.time())
         claims = base_claims.copy()
@@ -619,6 +634,7 @@ class TestUserJWTVerifier:
 
         verifier = UserJWTVerifier(
             issuer=test_issuer,
+            jwks_host=test_issuer,
             audience=test_audience,
             max_token_age_seconds=60,
         )

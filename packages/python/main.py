@@ -77,7 +77,8 @@ async def demo_architecture_summary() -> None:
 │  USAGE IN PRODUCTION:                                               │
 │                                                                     │
 │  # Configure once at startup                                        │
-│  verifier = UserJWTVerifier(issuer="...", audience="...")          |
+│  verifier = UserJWTVerifier(issuer="...", jwks_host="...",         │
+│                             audience="...")                        │
 │  user_profile = UserProfile(...)                                    │
 │                                                                     │
 │  # In auth middleware                                               │
@@ -100,6 +101,7 @@ async def demo_auth0_token_validation() -> None:
     try:
         authenticator = Auth0Authenticator(
             issuer=os.getenv("AUTH_0_ISSUER", ""),
+            jwks_host=os.getenv("AUTH_0_JWKS_HOST", ""),
             audience=os.getenv("AUTH_0_AUDIENCE"),
             profile_kwargs={"app_name": "lmr-db-client"}
         )
@@ -123,7 +125,6 @@ async def demo_auth0_token_validation() -> None:
     except Exception as error:
         print(f"✗ Unexpected error: {error}")
         
-
 async def demo_user_token() -> None:
     """Demo: Validating live User Tokens."""
     print("\n" + "=" * 70)
@@ -163,9 +164,10 @@ async def main() -> None:
     print("#  JWT Library Demo - Profile-Based Architecture")
     print("#" * 70)
 
-    await demo_user_token()
-    # await demo_auth0_token_validation()
     # await demo_architecture_summary()
+    await demo_auth0_token_validation()
+    # await demo_user_token()
+    
 
     print("\n" + "=" * 70)
     print("Demo complete!")
