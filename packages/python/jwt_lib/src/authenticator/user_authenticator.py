@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from jwt_lib.src.claims import TrustedClaims
@@ -10,6 +11,9 @@ from jwt_lib.src.verifier import JWTVerifier, UserJWTVerifier
 from jwt_lib.src.validation import ClaimRule
 
 from .authenticator import Authenticator
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserAuthenticator(Authenticator):
@@ -41,6 +45,13 @@ class UserAuthenticator(Authenticator):
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()
 
+        logger.debug(
+            "Initialized UserAuthenticator issuer=%s audience=%s allowed_algs=%s",
+            self.issuer,
+            self.audience,
+            self.allowed_algorithms,
+        )
+
     def _create_verifier(self) -> JWTVerifier:
         """Build the UserJWTVerifier with any caller-supplied allow-list."""
         return UserJWTVerifier(
@@ -60,6 +71,21 @@ class UserAuthenticator(Authenticator):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
         """Verify the token and enforce profile + optional claim rules."""
-        claims: TrustedClaims = await self.verifier.validate(token)
-        self.profile.validate(claims, extra_rules=extra_rules)
-        return claims
+        logger.debug(
+            "UserAuthenticator validating token with verifier=%s profile=%s",
+            self.verifier.__class__.__name__,
+            self.profile.profile_name,
+        )
+        try:
+            claims: TrustedClaims = await self.verifier.validate(token)
+            logger.debug(
+                "UserJWTVerifier succeeded issuer=%s audience=%s", self.issuer, self.audience
+            )
+            self.profile.validate(claims, extra_rules=extra_rules)
+            logger.debug(
+                "UserProfile validation passed profile=%s", self.profile.profile_name
+            )
+            return claims
+        except Exception:
+            logger.exception("UserAuthenticator validation failed for issuer=%s", self.issuer)
+            raise

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Iterable
 
@@ -26,6 +27,8 @@ from jwt_lib.src.exceptions import (
     SigningKeyNotFoundError,
     TokenNotYetValidError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class JWTVerifier(ABC):
@@ -60,6 +63,14 @@ class JWTVerifier(ABC):
             self.required_claims.append("aud")
 
         self._jwks_client = PyJWKClient(self.jwks_uri)
+        logger.debug(
+            "Initialized %s issuer=%s jwks_host=%s audience=%s allowed_algs=%s",
+            self.__class__.__name__,
+            self.issuer,
+            self.jwks_host,
+            self.audience,
+            sorted(self.allowed_algorithms),
+        )
 
     @abstractmethod
     async def validate(self, token: str) -> TrustedClaims:
@@ -68,12 +79,28 @@ class JWTVerifier(ABC):
 
     async def _verify_token(self, token: str) -> tuple[dict[str, Any], dict[str, Any]]:
         """Run the full verification pipeline and return the decoded pieces."""
+        logger.debug(
+            "Starting verification with %s issuer=%s",
+            self.__class__.__name__,
+            self.issuer,
+        )
         header: dict[str, Any] = self._get_unverified_header(token)
+        logger.debug(
+            "Extracted header kid=%s typ=%s alg=%s",
+            header.get("kid"),
+            header.get("typ"),
+            header.get("alg"),
+        )
         # Apply algorithm allow-list checks before touching the JWKS client.
         self._validate_algorithm(header)
         # Fetch the signing key via JWKS and decode with PyJWT.
         signing_key: Any = self._get_signing_key(token, self._jwks_client)
         claims: dict[str, Any] = self._decode_and_verify(token, signing_key)
+        logger.debug(
+            "Token verification succeeded issuer=%s audience=%s",
+            self.issuer,
+            self.audience,
+        )
         return header, claims
 
     def _get_unverified_header(self, token: str) -> dict[str, Any]:
@@ -81,6 +108,7 @@ class JWTVerifier(ABC):
         try:
             return jwt.get_unverified_header(token)
         except PyJWTInvalidTokenError as exc:
+            logger.warning("Failed to parse token header issuer=%s", self.issuer)
             raise InvalidTokenError("Invalid token format") from exc
 
     def _validate_algorithm(self, header: dict[str, Any]) -> None:
@@ -88,6 +116,12 @@ class JWTVerifier(ABC):
         algorithm: Any = header.get("alg")
         if algorithm not in self.allowed_algorithms:
             allowed = ", ".join(sorted(self.allowed_algorithms))
+            logger.warning(
+                "Rejecting token issuer=%s reason=algorithm_not_allowed alg=%s allowed=%s",
+                self.issuer,
+                algorithm,
+                allowed,
+            )
             raise AlgorithmNotAllowedError(
                 f"Algorithm '{algorithm}' is not allowed. Allowed: {allowed}"
             )
@@ -95,9 +129,11 @@ class JWTVerifier(ABC):
     def _get_signing_key(self, token: str, jwks_client: PyJWKClient) -> Any:
         """Load the public key that was used to sign *token* from JWKS."""
         try:
+            logger.debug("Fetching signing key from %s", self.jwks_uri)
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             return signing_key.key
         except Exception as exc:  # pragma: no cover - pyjwt raises generic errors
+            logger.exception("Failed to fetch signing key issuer=%s", self.issuer)
             raise SigningKeyNotFoundError("Could not find signing key for token") from exc
 
     def _decode_and_verify(self, token: str, key: Any) -> dict[str, Any]:
@@ -112,6 +148,12 @@ class JWTVerifier(ABC):
         }
 
         try:
+            logger.debug(
+                "Decoding token issuer=%s audience=%s required_claims=%s",
+                self.issuer,
+                self.audience,
+                self.required_claims,
+            )
             return jwt.decode(
                 token,
                 key,
@@ -121,20 +163,29 @@ class JWTVerifier(ABC):
                 options=options,
             )
         except ExpiredSignatureError as exc:
+            logger.warning("Token expired issuer=%s audience=%s", self.issuer, self.audience)
             raise ExpiredTokenError("The token has expired") from exc
         except ImmatureSignatureError as exc:
+            logger.warning("Token not yet valid issuer=%s audience=%s", self.issuer, self.audience)
             raise TokenNotYetValidError(
                 "The token is not yet valid (nbf claim is in the future)"
             ) from exc
         except PyJWTInvalidIssuerError as exc:
+            logger.warning(
+                "Invalid issuer detected expected=%s", self.issuer
+            )
             raise InvalidIssuerError(
                 f"Token issuer does not match expected issuer '{self.issuer}'"
             ) from exc
         except PyJWTInvalidAudienceError as exc:
+            logger.warning(
+                "Invalid audience detected expected=%s", self.audience
+            )
             raise InvalidAudienceError(
                 f"Token audience does not match expected audience '{self.audience}'"
             ) from exc
         except PyJWTInvalidTokenError as exc:
+            logger.warning("Generic token validation failure issuer=%s", self.issuer)
             raise InvalidTokenError(f"Token validation failed: {exc}") from exc
 
     @property

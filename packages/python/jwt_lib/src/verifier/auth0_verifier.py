@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.config.config import DEFAULT_AUTH0_ALLOWED_ALGORITHMS
 
 from .base_verifier import JWTVerifier
+
+
+logger = logging.getLogger(__name__)
 
 
 class Auth0JWTVerifier(JWTVerifier):
@@ -43,5 +47,7 @@ class Auth0JWTVerifier(JWTVerifier):
 
     async def validate(self, token: str) -> TrustedClaims:
         """Verify the token and wrap the resulting claims for downstream use."""
+        logger.debug("Auth0JWTVerifier validating token issuer=%s", self.issuer)
         header, claims = await self._verify_token(token)
+        logger.debug("Auth0JWTVerifier succeeded issuer=%s", self.issuer)
         return TrustedClaims(claims, headers=header)

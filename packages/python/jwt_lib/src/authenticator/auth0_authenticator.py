@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Iterable
 
 from jwt_lib.src.claims import TrustedClaims
@@ -10,6 +11,9 @@ from jwt_lib.src.verifier import Auth0JWTVerifier, JWTVerifier
 from jwt_lib.src.validation import ClaimRule
 
 from .authenticator import Authenticator
+
+
+logger = logging.getLogger(__name__)
 
 
 class Auth0Authenticator(Authenticator):
@@ -45,6 +49,13 @@ class Auth0Authenticator(Authenticator):
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()
 
+        logger.debug(
+            "Initialized Auth0Authenticator issuer=%s audience=%s allowed_algs=%s",
+            self.issuer,
+            self.audience,
+            self.allowed_algorithms,
+        )
+
     def _create_verifier(self) -> JWTVerifier:
         """Compose an Auth0JWTVerifier using the supplied config."""
         return Auth0JWTVerifier(
@@ -68,6 +79,21 @@ class Auth0Authenticator(Authenticator):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
         """Verify the token, then run profile + optional claim rules."""
-        claims: TrustedClaims = await self.verifier.validate(token)
-        self.profile.validate(claims, extra_rules=extra_rules)
-        return claims
+        logger.debug(
+            "Auth0Authenticator validating token with verifier=%s profile=%s",
+            self.verifier.__class__.__name__,
+            self.profile.profile_name,
+        )
+        try:
+            claims: TrustedClaims = await self.verifier.validate(token)
+            logger.debug(
+                "Auth0JWTVerifier succeeded issuer=%s audience=%s", self.issuer, self.audience
+            )
+            self.profile.validate(claims, extra_rules=extra_rules)
+            logger.debug(
+                "Auth0Profile validation passed profile=%s", self.profile.profile_name
+            )
+            return claims
+        except Exception:
+            logger.exception("Auth0Authenticator validation failed for issuer=%s", self.issuer)
+            raise

@@ -1,5 +1,6 @@
 """User token profile that focuses on business-specific claims."""
 
+import logging
 from typing import Iterable
 
 from .token_profile import TokenProfile
@@ -16,6 +17,8 @@ from jwt_lib.src.config.config import (
     DEFAULT_USER_TOKEN_TYPE,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class UserProfile(TokenProfile):
     """Token validation profile for user authentication tokens."""
@@ -29,6 +32,9 @@ class UserProfile(TokenProfile):
         self.audience = audience
 
         super().__init__(self._build_rules())
+        logger.debug(
+            "Initialized UserProfile issuer=%s audience=%s", self.issuer, self.audience
+        )
 
     def _build_rules(self) -> list[ClaimRule]:
         """Build validation rules for user tokens."""
@@ -49,10 +55,12 @@ class UserProfile(TokenProfile):
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
+        logger.debug("UserProfile validating claims profile=%s", self.profile_name)
         self._claim_validator.validate(claims)
         self._apply_extra_rules(claims, extra_rules)
 
         self._custom_validations(claims)
+        logger.debug("UserProfile validation complete profile=%s", self.profile_name)
 
     def _custom_validations(self, claims: TrustedClaims) -> None:
         """No-op: JWT verifier enforces JOSE + temporal contracts."""

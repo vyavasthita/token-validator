@@ -8,11 +8,15 @@ shape, temporal guardrails, etc.) so new token flavors can be introduced without
 touching the verifier.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Iterable
 
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.validation import ClaimValidator, ClaimRule
+
+
+logger = logging.getLogger(__name__)
 
 
 class TokenProfile(ABC):
@@ -90,8 +94,16 @@ class TokenProfile(ABC):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
         """Run optional supplemental claim rules when provided."""
-        if extra_rules:
-            ClaimValidator(extra_rules).validate(claims)
+        if not extra_rules:
+            return
+
+        runtime_rules = list(extra_rules)
+        logger.debug(
+            "Applying %s extra rule(s) for profile=%s",
+            len(runtime_rules),
+            self.profile_name,
+        )
+        ClaimValidator(runtime_rules).validate(claims)
 
     @property
     def profile_name(self) -> str:

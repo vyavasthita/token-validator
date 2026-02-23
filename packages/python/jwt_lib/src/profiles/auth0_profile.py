@@ -4,12 +4,16 @@ Auth0 Token Profile.
 Encapsulates validation rules for Auth0-issued service tokens.
 """
 
+import logging
 from typing import Iterable
 
 from .token_profile import TokenProfile
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.validation import ClaimRule, RequireClaim
 from jwt_lib.src.exceptions import InvalidClaimError
+
+
+logger = logging.getLogger(__name__)
 
 
 class Auth0Profile(TokenProfile):
@@ -29,6 +33,13 @@ class Auth0Profile(TokenProfile):
         
         super().__init__(self._build_rules())
 
+        logger.debug(
+            "Initialized Auth0Profile issuer=%s audience=%s app_name=%s",
+            issuer,
+            audience,
+            app_name,
+        )
+
     def _build_rules(self) -> list[ClaimRule]:
         """Require core Auth0 service token claims."""
         rules: list[ClaimRule] = [RequireClaim("gty", self.expected_grant_type)]
@@ -43,10 +54,12 @@ class Auth0Profile(TokenProfile):
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
+        logger.debug("Auth0Profile validating claims profile=%s", self.profile_name)
         self._claim_validator.validate(claims)
         self._apply_extra_rules(claims, extra_rules)
 
         self._custom_validations(claims)
+        logger.debug("Auth0Profile validation complete profile=%s", self.profile_name)
 
     def _custom_validations(self, claims: TrustedClaims) -> None:
         """Validate optional app name claim."""
@@ -54,9 +67,15 @@ class Auth0Profile(TokenProfile):
             actual_app: str | None = claims.get("appName")
             
             if actual_app != self.expected_app_name:
+                logger.warning(
+                    "Rejecting Auth0 token reason=app_name_mismatch expected=%s actual=%s",
+                    self.expected_app_name,
+                    actual_app,
+                )
                 raise InvalidClaimError(
                     f"Invalid appName claim: expected '{self.expected_app_name}' but found '{actual_app}'."
                 )
+            logger.debug("Auth0Profile confirmed appName=%s", self.expected_app_name)
 
     @property
     def profile_name(self) -> str:
