@@ -133,6 +133,7 @@ async def demo_user_token() -> None:
     try:
         authenticator = UserAuthenticator(
             issuer=os.getenv("AUTH_USER_ISSUER", ""),
+            jwks_host=os.getenv("AUTH_USER_JWKS_HOST", ""),
             audience=os.getenv("AUTH_USER_AUDIENCE"),
         )
 
@@ -162,8 +163,8 @@ async def main() -> None:
     print("#  JWT Library Demo - Profile-Based Architecture")
     print("#" * 70)
 
-    # await demo_user_token()
-    await demo_auth0_token_validation()
+    await demo_user_token()
+    # await demo_auth0_token_validation()
     # await demo_architecture_summary()
 
     print("\n" + "=" * 70)

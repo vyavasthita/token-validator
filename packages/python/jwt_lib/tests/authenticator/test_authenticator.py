@@ -14,6 +14,7 @@ from jwt_lib.src.validation import ClaimRule, ClaimValidator, RequireClaim
 from jwt_lib.src.exceptions import InvalidClaimError
 
 USER_DEFAULT_ISSUER = "https://auth.example.test/"
+USER_DEFAULT_JWKS_HOST = USER_DEFAULT_ISSUER
 
 
 class _StubVerifier(JWTVerifier):
@@ -113,11 +114,18 @@ async def test_authenticator_applies_extra_rules():
 
 
 def test_user_authenticator_uses_defaults():
-    authenticator = UserAuthenticator(issuer=USER_DEFAULT_ISSUER)
+    authenticator = UserAuthenticator(
+        issuer=USER_DEFAULT_ISSUER,
+        jwks_host=USER_DEFAULT_JWKS_HOST,
+    )
 
     expected_issuer = USER_DEFAULT_ISSUER.rstrip("/") + "/"
     assert authenticator.verifier.issuer == expected_issuer
     assert authenticator.verifier.audience is None
+    assert (
+        authenticator.verifier.jwks_uri
+        == "https://auth.example.test/token/.well-known/jwks.json"
+    )
 
     profile = authenticator.profile
     assert isinstance(profile, UserProfile)
@@ -136,7 +144,7 @@ def test_auth0_authenticator_uses_defaults():
     assert verifier.issuer == "https://auth.example.com/"
     assert verifier.audience == "https://api.example.com"
     assert verifier.allowed_algorithms == {"RS256"}
-    assert verifier.jwks_uri == "https://auth.example.com/.well-known/jwks.json"
+    assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
 
     profile = authenticator.profile
     assert isinstance(profile, Auth0Profile)
@@ -150,4 +158,4 @@ def test_auth0_authenticator_handles_issuer_without_slash():
 
     verifier = authenticator.verifier
     assert verifier.issuer == "https://auth.example.com/"
-    assert verifier.jwks_uri == "https://auth.example.com/.well-known/jwks.json"
+    assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"

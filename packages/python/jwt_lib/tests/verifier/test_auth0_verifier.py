@@ -66,7 +66,7 @@ class TestAuth0JWTVerifierInitialization:
         verifier = Auth0JWTVerifier(
             issuer="https://auth.example.com/",
         )
-        assert verifier.jwks_uri == "https://auth.example.com/.well-known/jwks.json"
+        assert verifier.jwks_uri == "https://auth.example.com/token/.well-known/jwks.json"
 
 
 class TestAuth0JWTVerifierValidation:

@@ -19,11 +19,13 @@ class UserAuthenticator(Authenticator):
     def __init__(
         self,
         issuer: str,
+        jwks_host: str,
         audience: str | None = None,
         allowed_algorithms: Iterable[str] | None = None,
     ) -> None:
         super().__init__()
         self.issuer = issuer
+        self.jwks_host = jwks_host
         self.audience = audience
         self.allowed_algorithms = list(allowed_algorithms or DEFAULT_USER_ALLOWED_ALGORITHMS)
         
@@ -35,6 +37,7 @@ class UserAuthenticator(Authenticator):
             issuer=self.issuer,
             audience=self.audience,
             allowed_algorithms=self.allowed_algorithms,
+            jwks_host=self.jwks_host,
         )
 
     def _create_profile(self) -> TokenProfile:

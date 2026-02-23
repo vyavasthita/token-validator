@@ -34,12 +34,14 @@ class UserJWTVerifier(JWTVerifier):
         max_token_age_seconds: int | None = DEFAULT_USER_MAX_TOKEN_AGE_SECONDS,
         expected_header_typ: str = DEFAULT_USER_HEADER_TYP,
         expected_header_alg: str = DEFAULT_USER_HEADER_ALG,
-        require_kid: bool = True,
+            require_kid: bool = True,
+            jwks_host: str | None = None,
     ) -> None:
         super().__init__(
             issuer=issuer,
             audience=audience,
             allowed_algorithms=allowed_algorithms or DEFAULT_USER_ALLOWED_ALGORITHMS,
+                jwks_host=jwks_host,
         )
         self.clock_skew_seconds = max(clock_skew_seconds, 0)
         self.max_token_age_seconds = (

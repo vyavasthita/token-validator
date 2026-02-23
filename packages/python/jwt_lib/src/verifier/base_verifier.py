@@ -40,8 +40,10 @@ class JWTVerifier(ABC):
         audience: str | None = None,
         allowed_algorithms: Iterable[str] | None = None,
         required_claims: list[str] | None = None,
+        jwks_host: str | None = None,
     ) -> None:
         self._issuer = issuer
+        self._jwks_host = (jwks_host or issuer).rstrip("/")
         self.audience = audience
         self.allowed_algorithms = set(allowed_algorithms or self.DEFAULT_ALLOWED_ALGORITHMS)
         self.required_claims = list(required_claims or self.DEFAULT_REQUIRED_CLAIMS)
@@ -123,7 +125,15 @@ class JWTVerifier(ABC):
 
     @property
     def jwks_uri(self) -> str:
-        return f"{self.issuer.rstrip('/')}/.well-known/jwks.json"
+        return f"{self.jwks_host}/token/.well-known/jwks.json"
+
+    @property
+    def jwks_host(self) -> str:
+        return self._jwks_host
+
+    @jwks_host.setter
+    def jwks_host(self, value: str) -> None:
+        self._jwks_host = value.rstrip("/")
 
     @property
     def issuer(self) -> str:
