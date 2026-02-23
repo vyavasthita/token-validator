@@ -6,7 +6,6 @@ from typing import Iterable
 
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.profiles import TokenProfile, UserProfile
-from jwt_lib.src.config.config import DEFAULT_USER_ALLOWED_ALGORITHMS
 from jwt_lib.src.verifier import JWTVerifier, UserJWTVerifier
 from jwt_lib.src.validation import ClaimRule
 
@@ -27,7 +26,7 @@ class UserAuthenticator(Authenticator):
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
-        self.allowed_algorithms = list(allowed_algorithms or DEFAULT_USER_ALLOWED_ALGORITHMS)
+        self.allowed_algorithms = allowed_algorithms
         
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()

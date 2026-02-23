@@ -6,7 +6,6 @@ from typing import Any, Iterable
 
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.profiles import Auth0Profile, TokenProfile
-from jwt_lib.src.config.config import DEFAULT_AUTH0_ALLOWED_ALGORITHMS
 from jwt_lib.src.verifier import Auth0JWTVerifier, JWTVerifier
 from jwt_lib.src.validation import ClaimRule
 
@@ -25,10 +24,11 @@ class Auth0Authenticator(Authenticator):
         profile_kwargs: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
+        
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
-        self.allowed_algorithms = list(allowed_algorithms or DEFAULT_AUTH0_ALLOWED_ALGORITHMS)
+        self.allowed_algorithms = allowed_algorithms
         self.profile_kwargs = dict(profile_kwargs or {})
         
         self._verifier = self._create_verifier()
