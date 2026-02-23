@@ -137,7 +137,7 @@ class JWTVerifier(ABC):
 
     @property
     def issuer(self) -> str:
-        return self._issuer.rstrip("/") + "/"
+        return self._issuer
 
     @issuer.setter
     def issuer(self, value: str) -> None:

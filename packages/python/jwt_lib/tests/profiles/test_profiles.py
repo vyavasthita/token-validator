@@ -13,6 +13,7 @@ from jwt_lib.src.validation.rules import RequireScopes
 
 USER_ISSUER = "https://auth.example.test/"
 USER_AUDIENCE = "https://api.example.test"
+USER_TOKEN_TYPE = "UserAuthToken"
 
 
 # ============================================================================
@@ -58,7 +59,7 @@ class TestUserProfile:
             "exp": now + 3600,
             "iat": now - 60,
             "nbf": now - 60,
-            "tokenType": "AuthToken",
+            "tokenType": USER_TOKEN_TYPE,
             "connectionMethod": "UIDPWD",
             "principalType": "USER",
         }, headers=token_headers)
