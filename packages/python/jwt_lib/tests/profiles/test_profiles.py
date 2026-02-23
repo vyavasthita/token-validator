@@ -113,36 +113,6 @@ class TestUserProfile:
         """Test profile name property."""
         assert profile.profile_name == "UserToken"
 
-    def test_missing_kid_header_fails(self, profile, valid_user_claims):
-        """kid header must exist."""
-        claims = self._claims_with(
-            valid_user_claims,
-            header_overrides={"kid": None},
-        )
-
-        with pytest.raises(InvalidClaimError, match="kid"):
-            profile.validate(claims)
-
-    def test_invalid_typ_header_fails(self, profile, valid_user_claims):
-        """Header typ must be JWT."""
-        claims = self._claims_with(
-            valid_user_claims,
-            header_overrides={"typ": "not-jwt"},
-        )
-
-        with pytest.raises(InvalidClaimError, match="typ"):
-            profile.validate(claims)
-
-    def test_invalid_alg_header_fails(self, profile, valid_user_claims):
-        """Header alg must be RS256."""
-        claims = self._claims_with(
-            valid_user_claims,
-            header_overrides={"alg": "HS256"},
-        )
-
-        with pytest.raises(InvalidClaimError, match="alg"):
-            profile.validate(claims)
-
     def test_invalid_issuer_fails(self, profile, valid_user_claims):
         """iss must match the configured issuer."""
         claims = self._claims_with(
@@ -151,40 +121,6 @@ class TestUserProfile:
         )
 
         with pytest.raises(InvalidClaimError, match="iss"):
-            profile.validate(claims)
-
-    def test_iat_in_future_fails(self, profile, valid_user_claims):
-        """iat cannot be in the future beyond skew."""
-        future_iat = int(time.time()) + 120
-        claims = self._claims_with(
-            valid_user_claims,
-            iat=future_iat,
-        )
-
-        with pytest.raises(InvalidClaimError, match="iat"):
-            profile.validate(claims)
-
-
-    def test_nbf_in_future_fails(self, profile, valid_user_claims):
-        """nbf must not be in the future."""
-        future_nbf = int(time.time()) + 120
-        claims = self._claims_with(
-            valid_user_claims,
-            nbf=future_nbf,
-        )
-
-        with pytest.raises(InvalidClaimError, match="not valid yet"):
-            profile.validate(claims)
-
-    def test_exp_in_past_fails(self, profile, valid_user_claims):
-        """exp must still be in the future."""
-        past_exp = int(time.time()) - 10
-        claims = self._claims_with(
-            valid_user_claims,
-            exp=past_exp,
-        )
-
-        with pytest.raises(InvalidClaimError, match="expired"):
             profile.validate(claims)
 
 

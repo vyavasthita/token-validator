@@ -18,12 +18,19 @@ USER_DEFAULT_ISSUER = "https://auth.example.test/"
 
 class _StubVerifier(JWTVerifier):
     def __init__(self, claims: TrustedClaims) -> None:
+        super().__init__(issuer="https://stub.example/", audience=None)
         self.claims = claims
         self.tokens: list[str] = []
 
     async def validate(self, token: str) -> TrustedClaims:
         self.tokens.append(token)
         return self.claims
+
+    def _enforce_header_rules(self, header: dict[str, object]) -> None:  # type: ignore[override]
+        return None
+
+    def _enforce_temporal_rules(self, claims: dict[str, object]) -> None:  # type: ignore[override]
+        return None
 
 
 class _StubProfile(TokenProfile):

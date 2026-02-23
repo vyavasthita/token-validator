@@ -7,7 +7,7 @@ from typing import Any, Iterable
 from jwt_lib.src.claims import TrustedClaims
 from jwt_lib.src.profiles import Auth0Profile, TokenProfile
 from jwt_lib.src.config.config import DEFAULT_AUTH0_ALLOWED_ALGORITHMS
-from jwt_lib.src.verifier import JWTVerifier
+from jwt_lib.src.verifier import Auth0JWTVerifier, JWTVerifier
 from jwt_lib.src.validation import ClaimRule
 
 from .authenticator import Authenticator
@@ -33,7 +33,7 @@ class Auth0Authenticator(Authenticator):
         self._profile = self._create_profile()
 
     def _create_verifier(self) -> JWTVerifier:
-        return JWTVerifier(
+        return Auth0JWTVerifier(
             issuer=self.issuer,
             audience=self.audience,
             allowed_algorithms=self.allowed_algorithms,
