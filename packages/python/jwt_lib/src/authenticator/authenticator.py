@@ -14,13 +14,26 @@ from jwt_lib.src.verifier import JWTVerifier
 class Authenticator(ABC):
     """Coordinate cryptographic verification followed by profile checks.
 
+    Example:
+        class MyAuthenticator(Authenticator):
+            def _create_verifier(self) -> JWTVerifier:
+                return CustomVerifier(...)
+
+            def _create_profile(self) -> TokenProfile:
+                return CustomProfile(...)
+
+            async def validate(self, token: str, extra_rules=None) -> TrustedClaims:
+                claims = await self.verifier.validate(token)
+                self.profile.validate(claims, extra_rules=extra_rules)
+                return claims
+
     Concrete authenticators must assign `_verifier` and `_profile` during
     initialization (typically by calling `_create_verifier()` and
-    `_create_profile()`). The properties simply return those prepared instances
-    so that no hidden construction occurs during validation.
+    `_create_profile()`).
     """
 
     def __init__(self) -> None:
+        """Prepare slots for verifier/profile instances."""
         self._verifier: JWTVerifier = None  # type: ignore[assignment]
         self._profile: TokenProfile = None  # type: ignore[assignment]
 

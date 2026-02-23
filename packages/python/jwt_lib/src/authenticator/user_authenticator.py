@@ -13,7 +13,16 @@ from .authenticator import Authenticator
 
 
 class UserAuthenticator(Authenticator):
-    """Authenticator for user tokens."""
+    """Authenticator for first-party user tokens.
+
+    Example:
+        authenticator = UserAuthenticator(
+            issuer="https://login.example.com/",
+            jwks_host="https://login.example.com/",
+            audience="my-api",
+        )
+        claims = await authenticator.validate(token)
+    """
 
     def __init__(
         self,
@@ -23,6 +32,7 @@ class UserAuthenticator(Authenticator):
         allowed_algorithms: Iterable[str] | None = None,
     ) -> None:
         super().__init__()
+        # Store thin configuration that gets forwarded to the verifier/profile.
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
@@ -32,6 +42,7 @@ class UserAuthenticator(Authenticator):
         self._profile = self._create_profile()
 
     def _create_verifier(self) -> JWTVerifier:
+        """Build the UserJWTVerifier with any caller-supplied allow-list."""
         return UserJWTVerifier(
             issuer=self.issuer,
             jwks_host=self.jwks_host,
@@ -40,6 +51,7 @@ class UserAuthenticator(Authenticator):
         )
 
     def _create_profile(self) -> TokenProfile:
+        """Instantiate the strict profile used for claims validation."""
         return UserProfile(issuer=self.issuer, audience=self.audience)
 
     async def validate(
@@ -47,6 +59,7 @@ class UserAuthenticator(Authenticator):
         token: str,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
+        """Verify the token and enforce profile + optional claim rules."""
         claims = await self.verifier.validate(token)
         self.profile.validate(claims, extra_rules=extra_rules)
         return claims

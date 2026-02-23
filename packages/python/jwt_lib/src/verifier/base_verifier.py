@@ -29,7 +29,14 @@ from jwt_lib.src.exceptions import (
 
 
 class JWTVerifier(ABC):
-    """Abstract verifier that handles cryptographic validation plumbing."""
+    """Abstract verifier that handles the shared JWKS + PyJWT workflow.
+
+    Example:
+        class ServiceVerifier(JWTVerifier):
+            async def validate(self, token: str) -> TrustedClaims:
+                header, claims = await self._verify_token(token)
+                return TrustedClaims(claims, headers=header)
+    """
 
     DEFAULT_ALLOWED_ALGORITHMS: tuple[str, ...] = ("RS256",)
     DEFAULT_REQUIRED_CLAIMS: tuple[str, ...] = ("exp", "iss", "sub")
@@ -42,6 +49,7 @@ class JWTVerifier(ABC):
         allowed_algorithms: Iterable[str] | None = None,
         required_claims: list[str] | None = None,
     ) -> None:
+        """Store verifier configuration and eagerly build the JWKS client."""
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
@@ -59,20 +67,24 @@ class JWTVerifier(ABC):
         raise NotImplementedError
 
     async def _verify_token(self, token: str) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Decode and cryptographically verify *token*, returning header and claims."""
+        """Run the full verification pipeline and return the decoded pieces."""
         header = self._get_unverified_header(token)
+        # Apply algorithm allow-list checks before touching the JWKS client.
         self._validate_algorithm(header)
+        # Fetch the signing key via JWKS and decode with PyJWT.
         signing_key = self._get_signing_key(token, self._jwks_client)
         claims = self._decode_and_verify(token, signing_key)
         return header, claims
 
     def _get_unverified_header(self, token: str) -> dict[str, Any]:
+        """Extract the JOSE header without verifying the signature."""
         try:
             return jwt.get_unverified_header(token)
         except PyJWTInvalidTokenError as exc:
             raise InvalidTokenError("Invalid token format") from exc
 
     def _validate_algorithm(self, header: dict[str, Any]) -> None:
+        """Ensure the JOSE header's alg value is on the allow-list."""
         algorithm = header.get("alg")
         if algorithm not in self.allowed_algorithms:
             allowed = ", ".join(sorted(self.allowed_algorithms))
@@ -81,6 +93,7 @@ class JWTVerifier(ABC):
             )
 
     def _get_signing_key(self, token: str, jwks_client: PyJWKClient) -> Any:
+        """Load the public key that was used to sign *token* from JWKS."""
         try:
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             return signing_key.key
@@ -88,6 +101,7 @@ class JWTVerifier(ABC):
             raise SigningKeyNotFoundError("Could not find signing key for token") from exc
 
     def _decode_and_verify(self, token: str, key: Any) -> dict[str, Any]:
+        """Use PyJWT to validate timing + issuer/audience claims."""
         options: Options = {
             "require": self.required_claims,
             "verify_exp": True,

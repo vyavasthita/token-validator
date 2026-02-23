@@ -23,7 +23,18 @@ _MISSING = object()
 
 
 class UserJWTVerifier(JWTVerifier):
-    """Verifier for first-party user tokens with stricter temporal rules."""
+    """Verifier for first-party user tokens with stricter temporal rules.
+
+    Example:
+        verifier = UserJWTVerifier(
+            issuer="https://login.example.com/",
+            jwks_host="https://login.example.com/",
+            audience="my-first-party-app",
+        )
+        claims = await verifier.validate(encoded_token)
+    """
+
+    DEFAULT_ALLOWED_ALGORITHMS = DEFAULT_USER_ALLOWED_ALGORITHMS
 
     def __init__(
         self,
@@ -37,11 +48,12 @@ class UserJWTVerifier(JWTVerifier):
         expected_header_alg: str = DEFAULT_USER_HEADER_ALG,
         require_kid: bool = True,
     ) -> None:
+        """Capture policy toggles (clock skew, JOSE expectations, etc.)."""
         super().__init__(
             issuer=issuer,
             jwks_host=jwks_host,
             audience=audience,
-            allowed_algorithms=allowed_algorithms or DEFAULT_USER_ALLOWED_ALGORITHMS,
+            allowed_algorithms=allowed_algorithms,
         )
         self.clock_skew_seconds = max(clock_skew_seconds, 0)
         self.max_token_age_seconds = (
@@ -52,6 +64,7 @@ class UserJWTVerifier(JWTVerifier):
         self.require_kid = require_kid
 
     async def validate(self, token: str) -> TrustedClaims:
+        """Run JOSE + temporal enforcement after base cryptographic checks."""
         header, claims = await self._verify_token(token)
         self._enforce_header_rules(header)
         self._enforce_temporal_rules(claims)

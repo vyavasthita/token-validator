@@ -13,7 +13,17 @@ from .authenticator import Authenticator
 
 
 class Auth0Authenticator(Authenticator):
-    """Facade that wires Auth0 verifier + profile using provided kwargs."""
+    """Facade that wires Auth0 verifier + profile using provided kwargs.
+
+    Example:
+        authenticator = Auth0Authenticator(
+            issuer="https://tenant.auth0.com/",
+            jwks_host="https://tenant.auth0.com/",
+            audience="https://api.example.com",
+            profile_kwargs={"expected_tenant": "example"},
+        )
+        claims = await authenticator.validate(token)
+    """
 
     def __init__(
         self,
@@ -25,6 +35,7 @@ class Auth0Authenticator(Authenticator):
     ) -> None:
         super().__init__()
         
+        # Configuration is stored verbatim and forwarded to verifier/profile.
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
@@ -35,6 +46,7 @@ class Auth0Authenticator(Authenticator):
         self._profile = self._create_profile()
 
     def _create_verifier(self) -> JWTVerifier:
+        """Compose an Auth0JWTVerifier using the supplied config."""
         return Auth0JWTVerifier(
             issuer=self.issuer,
             jwks_host=self.jwks_host,
@@ -43,6 +55,7 @@ class Auth0Authenticator(Authenticator):
         )
 
     def _create_profile(self) -> TokenProfile:
+        """Instantiate the Auth0Profile with any optional overrides."""
         return Auth0Profile(
             issuer=self.issuer,
             audience=self.audience,
@@ -54,6 +67,7 @@ class Auth0Authenticator(Authenticator):
         token: str,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
+        """Verify the token, then run profile + optional claim rules."""
         claims = await self.verifier.validate(token)
         self.profile.validate(claims, extra_rules=extra_rules)
         return claims

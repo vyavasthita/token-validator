@@ -165,8 +165,8 @@ async def main() -> None:
     print("#" * 70)
 
     # await demo_architecture_summary()
-    await demo_auth0_token_validation()
-    # await demo_user_token()
+    # await demo_auth0_token_validation()
+    await demo_user_token()
     
 
     print("\n" + "=" * 70)

@@ -8,14 +8,15 @@ from typing import Any, Iterator, Mapping
 
 
 class TrustedClaims(Mapping[str, Any]):
-    """
-    Immutable container for verified JWT claims.
+    """Immutable container for verified JWT claims.
+
+    Example:
+        claims = TrustedClaims({"sub": "user-123", "scope": "read:users"})
+        if claims.subject == "user-123":
+            ...
 
     This object is created ONLY after the token signature has been verified.
     It provides read-only access to claims through a dict-like interface.
-
-    Attributes:
-        _claims: The internal dictionary storing the verified claims.
     """
 
     def __init__(
@@ -30,7 +31,7 @@ class TrustedClaims(Mapping[str, Any]):
             claims: Dictionary of verified JWT claims.
             headers: Optional dictionary containing the JWT header values.
         """
-        # Create a shallow copy to ensure immutability
+        # Create shallow copies so downstream code cannot mutate shared data.
         self._claims: dict[str, Any] = claims.copy()
         self._headers: dict[str, Any] = headers.copy() if headers else {}
 
