@@ -198,9 +198,12 @@ def selected_demos(args: argparse.Namespace) -> list[str]:
         "auth0": args.auth0,
         "user": args.user,
     }
+
     chosen = [name for name, enabled in mapping.items() if enabled]
+
     if args.all or not chosen:
         return list(mapping.keys())
+    
     return chosen
 
 
@@ -212,8 +215,10 @@ async def main(demos_to_run: list[str]) -> None:
 
     if "architecture" in demos_to_run:
         await demo_architecture_summary()
+
     if "auth0" in demos_to_run:
         await demo_auth0_token_validation()
+        
     if "user" in demos_to_run:
         await demo_user_token()
 

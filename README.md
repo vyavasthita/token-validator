@@ -17,15 +17,16 @@ jwt-lib = { git = "https://github.com/vyavasthita/jwt-lib.git", branch = "main",
 from jwt_lib.src.authenticator import UserAuthenticator
 
 authenticator = UserAuthenticator(
-	issuer="https://auth.anaplan.com",
-	jwks_host="https://auth.anaplan.com",
+	issuer="",
+	jwks_host="",
 )
 
 claims = await authenticator.validate(token)  # UserJWTVerifier + UserProfile run together
 ```
 
 ### TrustedClaims object
-`validate()` returns a `TrustedClaims` instance (see [packages/python/jwt_lib/src/claims/trusted_claims.py](packages/python/jwt_lib/src/claims/trusted_claims.py)). It behaves like a read-only dict and offers convenience properties:
+`validate()` returns a `TrustedClaims` instance (see [packages/python/jwt_lib/src/claims/trusted_claims.py](packages/python/jwt_lib/src/claims/trusted_claims.py)). 
+It behaves like a read-only dict and offers convenience properties:
 
 - `claims.subject` → `sub`
 - `claims.issuer` → `iss`
