@@ -123,7 +123,6 @@ def future_nbf_token(future_nbf_claims: dict[str, Any], private_key_pem: bytes) 
     return create_token(future_nbf_claims, private_key_pem)
 
 
-
 @pytest.fixture
 def token_with_kid(base_claims: dict[str, Any], private_key_pem: bytes) -> str:
     """Create a valid token with a key ID in the header."""
