@@ -1,3 +1,6 @@
+# VS Code packaging artifacts
+.vscodeignore
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

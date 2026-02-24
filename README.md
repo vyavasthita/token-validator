@@ -12,6 +12,10 @@ JWT Token Validation library.
 Add following in your pyproject.toml
 jwt-lib = { git = "https://github.com/vyavasthita/jwt-lib.git", branch = "main", subdirectory = "packages/python" }
 
+### Install via Poetry (client usage)
+- Add the dependency directly: `poetry add "git+https://github.anaplan.com/dilip-sharma/jwt-lib.git#subdirectory=packages/python"`
+- Or keep the explicit table entry shown above so dependency locking stays in version control.
+- Clients do not need the `test` extra; only contributors running the suite locally should enable it as shown earlier.
 
 ```python
 from jwt_lib.src.authenticator import UserAuthenticator
@@ -50,8 +54,10 @@ cd packages/python
 
 ### Install Packages
 ```bash
-poetry install
+poetry install --extras test
 ```
+
+The `test` extra pulls in `pytest`, `pytest-asyncio`, and `pytest-cov` only for local testing, so the published package stays lean.
 
 ### Running tests
 ```bash

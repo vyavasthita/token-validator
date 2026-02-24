@@ -23,9 +23,6 @@ logger = logging.getLogger(__name__)
 class UserProfile(TokenProfile):
     """Token validation profile for user authentication tokens."""
 
-    TOKEN_TYPE = DEFAULT_USER_TOKEN_TYPE
-    PRINCIPAL_TYPE = DEFAULT_USER_PRINCIPAL_TYPE
-
     def __init__(self, issuer: str, audience: str | None = None) -> None:
         """Configure validation expectations for user tokens."""
         self.issuer = issuer
@@ -39,8 +36,8 @@ class UserProfile(TokenProfile):
     def _build_rules(self) -> list[ClaimRule]:
         """Build validation rules for user tokens."""
         rules: list[ClaimRule] = [
-            RequireClaim("tokenType", self.TOKEN_TYPE),
-            RequireClaim("principalType", self.PRINCIPAL_TYPE),
+            RequireClaim("tokenType", DEFAULT_USER_TOKEN_TYPE),
+            RequireClaim("principalType", DEFAULT_USER_PRINCIPAL_TYPE),
             RequireClaim("iss", self.issuer),
             RequireClaimIn("connectionMethod", list(DEFAULT_USER_ALLOWED_CONNECTION_METHODS)),
         ]
