@@ -56,18 +56,18 @@ flowchart LR
 3. alg = RS256
 
 ### Body Validation
-1. iss = https://auth.anaplan.com
+1. iss = https://auth.service.com
 2. sub = NA
 3. tid = NA
 4. targetTenantId = NA
-5. aud = https://api.anaplan.com
+5. aud = https://api.service.com
 6. uid = NA
 7. iat = not in the future (within clock skew) and optionally not too old (max token age)
 8. nbf = now >= nbf
 9. now < exp
 10. maxExpiry = NA
 11. refreshTokenId = NA
-12. tokenType = AnaplanAuthToken
+12. tokenType = UserAuthToken
 13. principalType = USER
 14. jti = NA
 15. connectionMethod = SAML, UIDPWD

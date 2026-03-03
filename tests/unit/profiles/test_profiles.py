@@ -13,7 +13,7 @@ from jwt_lib.validation.rules import RequireClaim, RequireScopes
 
 USER_ISSUER = "https://auth.example.test/"
 USER_AUDIENCE = "https://api.example.test"
-USER_TOKEN_TYPE = "AnaplanAuthToken"
+USER_TOKEN_TYPE = "UserAuthToken"
 
 
 # ============================================================================

@@ -14,7 +14,7 @@ AUTH_0_GRANT_TYPE = "client-credentials"
 
 # User Token Configuration
 USER_ALLOWED_ALGORITHMS = ("RS256",)
-USER_TOKEN_TYPE = "AnaplanAuthToken"
+USER_TOKEN_TYPE = "UserAuthToken"
 USER_PRINCIPAL_TYPE = "USER"
 USER_MAX_TOKEN_AGE_SECONDS: Final[int | None] = None
 

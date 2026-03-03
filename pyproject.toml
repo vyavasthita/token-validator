@@ -2,7 +2,7 @@
 name = "token-validator"
 version = "1.0.0"
 description = "Lib to validate JWT token"
-authors = ["Dilip Sharma <dilip.sharma@anaplan.com>"]
+authors = ["Dilip Sharma <diliplakshya@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "jwt_lib", from = "src" }]
 

@@ -17,13 +17,13 @@ Python lib to validate JWT user token and Auth0 token.
 Add the following in your `pyproject.toml`:
 
 ```toml
-jwt-lib = { git = "https://github.anaplan.com/platform-data-services/token-validator.git", branch = "main" }
+jwt-lib = { git = "https://github.com/vyavasthita/token-validator.git", branch = "main" }
 ```
 
 ### Option 2: Install via Poetry (client usage)
 - Add the dependency directly:
     ```bash
-    poetry add "git+https://github.anaplan.com/platform-data-services/token-validator.git"
+    poetry add "git+https://github.com/vyavasthita/token-validator.git"
     ```
 ---
 

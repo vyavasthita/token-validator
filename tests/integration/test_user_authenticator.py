@@ -12,7 +12,7 @@ from jwt_lib.claims import TrustedClaims
 from jwt_lib.exceptions import ExpiredTokenError
 from tests.conftest import create_token
 
-USER_TOKEN_TYPE = "AnaplanAuthToken"
+USER_TOKEN_TYPE = "UserAuthToken"
 USER_PRINCIPAL_TYPE = "USER"
 USER_CONNECTION_METHOD = "UIDPWD"
 
