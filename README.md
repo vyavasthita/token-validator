@@ -1,55 +1,37 @@
-# jwt_lib
+# token-validator
 JWT Token Validation library.
+
+## About
+Python lib to validate JWT user token and Auth0 token.
+
+---
 
 ## Documentation
 
-- Architecture overview: [packages/python/docs/architecture.md](packages/python/docs/architecture.md)
+- Architecture overview: [docs/architecture.md](docs/architecture.md)
 
+---
 
-**Usage as lib in another service**
+## Usage as a Library in Another Service
+### Option 1: Using Poetry dependency
+Add the following in your `pyproject.toml`:
 
-## How to install
-Add following in your pyproject.toml
-jwt-lib = { git = "https://github.com/vyavasthita/jwt-lib.git", branch = "main", subdirectory = "packages/python" }
-
-### Install via Poetry (client usage)
-- Add the dependency directly: `poetry add "git+https://github.anaplan.com/dilip-sharma/jwt-lib.git#subdirectory=packages/python"`
-- Or keep the explicit table entry shown above so dependency locking stays in version control.
-- Clients do not need the `test` extra; only contributors running the suite locally should enable it as shown earlier.
-
-```python
-from jwt_lib.src.authenticator import UserAuthenticator
-
-authenticator = UserAuthenticator(
-	issuer="",
-	jwks_host="",
-)
-
-claims = await authenticator.validate(token)  # UserJWTVerifier + UserProfile run together
+```toml
+jwt-lib = { git = "https://github.anaplan.com/platform-data-services/token-validator.git", branch = "main" }
 ```
 
-### TrustedClaims object
-`validate()` returns a `TrustedClaims` instance (see [packages/python/jwt_lib/src/claims/trusted_claims.py](packages/python/jwt_lib/src/claims/trusted_claims.py)). 
-It behaves like a read-only dict and offers convenience properties:
+### Option 2: Install via Poetry (client usage)
+- Add the dependency directly:
+    ```bash
+    poetry add "git+https://github.anaplan.com/platform-data-services/token-validator.git"
+    ```
+---
 
-- `claims.subject` → `sub`
-- `claims.issuer` → `iss`
-- `claims.audience` → `aud` (string or list)
-- `claims.expiration` → `exp` (Unix timestamp)
-- `claims.issued_at` → `iat`
-- `claims.not_before` → `nbf`
-- `claims.jwt_id` → `jti`
-- `claims.headers` → copy of the JOSE header
-- `claims.get_header("kid")` → header helper
-- `claims.to_dict()` → shallow copy of all claims
+## Test the Library Independently
 
-It also implements `Mapping`, so `claims["custom"]` and `claims.get("custom")` work for domain-specific fields.
-
-**Test the lib independently**
-
-### Go to packages/python
+### Go to repo root
 ```bash
-cd packages/python
+cd token-validator
 ```
 
 ### Install Packages
@@ -57,49 +39,61 @@ cd packages/python
 poetry install --extras test
 ```
 
-The `test` extra pulls in `pytest`, `pytest-asyncio`, and `pytest-cov` only for local testing, so the published package stays lean.
+- The optional `test` extra pulls in pytest helpers only for local development, so the published package stays lean.
+- The same command applies when someone clones this repository directly (for example, to run the examples or tests); installing with `--extras test` ensures the helpers are present without bundling them in the published wheel.
 
-### Running tests
+---
+
+## Running Examples
+
+- Standalone example scripts are available in the `examples/` directory. 
+- Each script demonstrates a specific use case and can be run directly after setting the required environment variables.
+
+Go to dir, if not already in.
 ```bash
-poetry run pytest
+cd token-validator
 ```
 
-**Running the demo script**
+### User Token Validation Example
 
-- The demo expects live tokens provided via environment variables. 
-- Export the set that matches the token type you want to validate, then run the script.
-- The script now exposes a CLI so each demo can be run independently. Use `poetry run python main.py --help` to see all options:
-	- `--architecture` renders the layered design walkthrough.
-	- `--auth0` runs only the Auth0 token validation demo.
-	- `--user` runs only the first-party user token demo.
-	- `--all` (or no flags) runs every demo in sequence.
+Set the following environment variables:
 
-#### User Token Demo (In `main.py`)
-- `AUTH_USER_ISSUER` – Issuer URL (must match the `iss` claim including trailing slash).
-- `AUTH_USER_JWKS_HOST` – Host that serves the JWKS document.
-- `AUTH_USER_AUDIENCE` – Audience string expected in the token (optional if your tokens omit `aud`).
-- `AUTH_TOKEN` – Encoded JWT to validate.
-
-Example (run only the user demo after setting variables):
 ```bash
 export AUTH_USER_ISSUER="https://login.example.com/"
 export AUTH_USER_JWKS_HOST="https://login.example.com/"
 export AUTH_USER_AUDIENCE="my-first-party-app"
 export AUTH_TOKEN="<jwt here>"
-poetry run python main.py --user
+```
+Then run:
+
+```bash
+poetry run python examples/user_token_validation_example.py
 ```
 
-#### Auth0 Token Demo (In `main.py`)
-- `AUTH_0_ISSUER` – Auth0 issuer URL (e.g., `https://tenant.auth0.com/`).
-- `AUTH_0_JWKS_HOST` – Hostname that exposes the JWKS set (usually same as issuer).
-- `AUTH_0_AUDIENCE` – API audience configured in Auth0.
-- `AUTH_0_TOKEN` – Encoded Auth0 access token.
+### Auth0 Token Validation Example
 
-Example (Auth0-only run):
+Set the following environment variables:
+
 ```bash
 export AUTH_0_ISSUER="https://tenant.auth0.com/"
 export AUTH_0_JWKS_HOST="https://tenant.auth0.com/"
 export AUTH_0_AUDIENCE="https://api.example.com"
 export AUTH_0_TOKEN="<jwt here>"
-poetry run python main.py --auth0
+```
+Then run:
+
+```bash
+poetry run python examples/auth0_token_validation_example.py
+```
+
+### Architecture Summary Example
+
+No environment variables are required. Run:
+```bash
+poetry run python examples/architecture_summary_example.py
+```
+
+### Running tests
+```bash
+poetry run pytest
 ```
