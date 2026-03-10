@@ -1,99 +1,192 @@
 # token-validator
-JWT Token Validation library.
 
-## About
-Python lib to validate JWT user token and Auth0 token.
+<p align="left">
+    <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+" />
+    <img src="https://img.shields.io/badge/token-user%20%7C%20auth0-success" alt="Supported token types" />
+    <img src="https://img.shields.io/badge/tests-pytest-informational" alt="Tests" />
+</p>
 
----
+JWT validation library for Python services.
 
-## Documentation
+- Validates `User` tokens
+- Validates `Auth0` tokens
+- Exposes a clean library API for other services
 
-- Architecture overview: [docs/architecture.md](docs/architecture.md)
+## Why Use This Library
 
----
+- Shared and consistent JWT validation across services
+- Built-in issuer, audience, signature, and claim checks
+- Ready-to-run examples for both token types
+- Unit and integration test coverage
 
-## Usage as a Library in Another Service
-### Option 1: Using Poetry dependency
-Add the following in your `pyproject.toml`:
+## Install
+
+### Option 1: Add in `pyproject.toml`
 
 ```toml
-jwt-lib = { git = "https://github.com/vyavasthita/token-validator.git", branch = "main" }
+jwt-lib = { git = "https://github.com:vyavasthita/token-validator.git", branch = "main" }
 ```
 
-### Option 2: Install via Poetry (client usage)
-- Add the dependency directly:
-    ```bash
-    poetry add "git+https://github.com/vyavasthita/token-validator.git"
-    ```
----
+### Option 2: add directly with Poetry
 
-## Test the Library Independently
+```bash
+poetry add "git+https://github.com:vyavasthita/token-validator.git"
+```
 
-### Go to repo root
+## Quick Start
+
+Validating User Token
+```python
+from jwt_lib.authenticator import UserAuthenticator
+
+authenticator = UserAuthenticator(
+        issuer="https://login.example.com/",
+        jwks_host="https://login.example.com/",
+        audience="my-first-party-app",
+)
+
+claims = await authenticator.validate(token)
+print(claims.subject)
+```
+
+## Run This Repository Locally
+
 ```bash
 cd token-validator
 ```
 
-### Install Packages
 ```bash
 poetry install --extras test
 ```
 
-- The optional `test` extra pulls in pytest helpers only for local development, so the published package stays lean.
-- The same command applies when someone clones this repository directly (for example, to run the examples or tests); installing with `--extras test` ensures the helpers are present without bundling them in the published wheel.
+`--extras test` installs local test-only dependencies while keeping published package dependencies lean.
 
----
+## Examples
 
-## Running Examples
+Examples are available in `examples/`.
 
-- Standalone example scripts are available in the `examples/` directory. 
-- Each script demonstrates a specific use case and can be run directly after setting the required environment variables.
-
-Go to dir, if not already in.
-```bash
-cd token-validator
-```
-
-### User Token Validation Example
-
-Set the following environment variables:
+### User Token Example
 
 ```bash
 export AUTH_USER_ISSUER="https://login.example.com/"
 export AUTH_USER_JWKS_HOST="https://login.example.com/"
 export AUTH_USER_AUDIENCE="my-first-party-app"
 export AUTH_TOKEN="<jwt here>"
-```
-Then run:
-
-```bash
 poetry run python examples/user_token_validation_example.py
 ```
 
-### Auth0 Token Validation Example
-
-Set the following environment variables:
+### Auth0 Token Example
 
 ```bash
 export AUTH_0_ISSUER="https://tenant.auth0.com/"
 export AUTH_0_JWKS_HOST="https://tenant.auth0.com/"
 export AUTH_0_AUDIENCE="https://api.example.com"
 export AUTH_0_TOKEN="<jwt here>"
-```
-Then run:
-
-```bash
 poetry run python examples/auth0_token_validation_example.py
 ```
 
 ### Architecture Summary Example
 
-No environment variables are required. Run:
 ```bash
 poetry run python examples/architecture_summary_example.py
 ```
 
-### Running tests
+## Run Tests
+
 ```bash
 poetry run pytest
 ```
+
+# Architecture Overview
+
+This document shows how `token-validator` combines cryptographic verification and business claim validation.
+
+## High-Level Components
+
+```mermaid
+flowchart TB
+    service[Client Service] --> authenticator[Authenticator]
+
+    subgraph Cryptographic Validation
+      authenticator --> verifier[JWTVerifier]
+      verifier --> jwks[AsyncJWKSFetcher]
+      verifier --> cache[(Signing Key Cache)]
+      verifier --> trusted[TrustedClaims]
+    end
+
+    subgraph Business Validation
+      authenticator --> profile[TokenProfile]
+      profile --> validator[ClaimValidator]
+      validator --> rules[ClaimRule Set]
+    end
+
+    trusted --> decision{Allow / Reject}
+    rules --> decision
+```
+
+## Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant S as Service
+    participant A as Authenticator
+    participant V as JWTVerifier
+    participant F as AsyncJWKSFetcher
+    participant P as TokenProfile
+    participant C as ClaimValidator
+
+    S->>A: validate(token)
+    A->>V: validate(token)
+    V->>V: parse header + verify algorithm
+    V->>F: fetch JWKS (cache/TTL/retry)
+    F-->>V: jwks keys
+    V->>V: verify signature + iss/aud/exp/nbf/iat
+    V-->>A: TrustedClaims
+    A->>P: profile.validate(claims)
+    P->>C: execute rules
+    C-->>P: pass/fail
+    P-->>A: pass/fail
+    A-->>S: TrustedClaims or exception
+```
+
+## Core Roles
+
+- `Authenticator`: single entry point for each token type.
+- `JWTVerifier`: JOSE header checks, JWKS resolution, cryptographic verification.
+- `AsyncJWKSFetcher`: HTTP fetch + retry + TTL caching for JWKS document.
+- `TokenProfile`: token-type-specific business checks.
+- `ClaimValidator`: executes reusable `ClaimRule` objects.
+- `TrustedClaims`: immutable container returned after successful verification.
+
+## Validation Coverage
+
+### User Token
+
+| Area | Rules |
+|---|---|
+| Header | `kid` present, `typ=JWT`, `alg=RS256` |
+| Standard claims | `iss`, `aud`, `exp`, `nbf`, `iat` |
+| Domain claims | `tokenType=UserAuthToken`, `principalType=USER`, `connectionMethod in {SAML, UIDPWD}` |
+
+### Auth0 Token
+
+| Area | Rules |
+|---|---|
+| Header | allowed algorithm |
+| Standard claims | `iss`, optional `aud`, `exp` |
+| Domain claims | `gty=client-credentials`, optional `appName` |
+
+## Repository Layout
+
+
+<details>
+<summary><strong>Project Layout</strong></summary>
+
+```text
+token-validator/
+    src/jwt_lib/
+    tests/
+    examples/
+```
+
+</details>
