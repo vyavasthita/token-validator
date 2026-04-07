@@ -49,6 +49,20 @@ claims = await authenticator.validate(token)
 print(claims.subject)
 ```
 
+### Enforcing Roles (User Token)
+#### Available Extra Rules
+
+| Rule | Logic | Claim | Use case |
+|---|---|---|---|
+| `RequireRole` | AND | `roles` (list) | Endpoint needs **all** listed roles |
+| `RequireAnyRole` | OR | `roles` (list) | Endpoint needs **any one** of the listed roles |
+| `RequireScopes` | AND | `scope` (str) | Endpoint needs all listed OAuth scopes |
+| `RequireAnyScope` | OR | `scope` (str) | Endpoint needs any one OAuth scope |
+| `RequireClaim` | exact | any | Claim must exist (optionally with a specific value) |
+| `RequireSubject` | exact | `sub` | Token must belong to a specific subject |
+| `RequireGrantType` | exact | `gty` | Token must have a specific grant type |
+| `RequireClaimIn` | in-set | any | Claim value must be one of an allowed set |
+
 ## Run This Repository Locally
 
 ```bash

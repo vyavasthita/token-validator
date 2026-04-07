@@ -10,6 +10,8 @@ from jwt_lib.validation import (
     RequireGrantType,
     RequireClaim,
     RequireSubject,
+    RequireRole,
+    RequireAnyRole,
 )
 
 
@@ -226,4 +228,112 @@ class TestRequireSubject:
         claims = TrustedClaims({"iss": "issuer"})
         
         with pytest.raises(InvalidClaimError):
+            await rule.validate(claims)
+
+
+class TestRequireRole:
+    """Tests for RequireRole rule."""
+
+    @pytest.mark.asyncio
+    async def test_passes_when_all_roles_present(self):
+        """Test validation passes when all required roles are present."""
+        rule = RequireRole(["admin", "user"])
+        claims = TrustedClaims({
+            "roles": ["admin", "user", "moderator"],
+            "sub": "testuser",
+        })
+
+        await rule.validate(claims)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_role_missing(self):
+        """Test validation fails when a required role is missing."""
+        rule = RequireRole(["admin", "user"])
+        claims = TrustedClaims({
+            "roles": ["user"],
+            "sub": "testuser",
+        })
+
+        with pytest.raises(PermissionDeniedError) as exc_info:
+            await rule.validate(claims)
+
+        assert "admin" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_roles_claim_missing(self):
+        """Test validation fails when roles claim is absent."""
+        rule = RequireRole(["admin"])
+        claims = TrustedClaims({"sub": "testuser"})
+
+        with pytest.raises(PermissionDeniedError):
+            await rule.validate(claims)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_roles_not_a_list(self):
+        """Test validation fails when roles claim is not a list."""
+        rule = RequireRole(["admin"])
+        claims = TrustedClaims({
+            "roles": "admin",
+            "sub": "testuser",
+        })
+
+        with pytest.raises(PermissionDeniedError):
+            await rule.validate(claims)
+
+    @pytest.mark.asyncio
+    async def test_passes_with_empty_requirements(self):
+        """Test validation passes with empty required roles."""
+        rule = RequireRole([])
+        claims = TrustedClaims({"sub": "testuser"})
+
+        await rule.validate(claims)
+
+
+class TestRequireAnyRole:
+    """Tests for RequireAnyRole rule."""
+
+    @pytest.mark.asyncio
+    async def test_passes_when_at_least_one_role_present(self):
+        """Test validation passes when at least one role matches."""
+        rule = RequireAnyRole(["admin", "moderator"])
+        claims = TrustedClaims({
+            "roles": ["user", "moderator"],
+            "sub": "testuser",
+        })
+
+        await rule.validate(claims)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_no_role_matches(self):
+        """Test validation fails when no acceptable role is present."""
+        rule = RequireAnyRole(["admin", "moderator"])
+        claims = TrustedClaims({
+            "roles": ["user", "viewer"],
+            "sub": "testuser",
+        })
+
+        with pytest.raises(PermissionDeniedError) as exc_info:
+            await rule.validate(claims)
+
+        assert "admin" in str(exc_info.value) or "moderator" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_roles_claim_missing(self):
+        """Test validation fails when roles claim is absent."""
+        rule = RequireAnyRole(["admin"])
+        claims = TrustedClaims({"sub": "testuser"})
+
+        with pytest.raises(PermissionDeniedError):
+            await rule.validate(claims)
+
+    @pytest.mark.asyncio
+    async def test_fails_when_roles_not_a_list(self):
+        """Test validation fails when roles claim is not a list."""
+        rule = RequireAnyRole(["admin"])
+        claims = TrustedClaims({
+            "roles": "admin",
+            "sub": "testuser",
+        })
+
+        with pytest.raises(PermissionDeniedError):
             await rule.validate(claims)

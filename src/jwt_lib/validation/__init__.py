@@ -8,6 +8,8 @@ from .rules import (
     RequireClaim,
     RequireSubject,
     RequireClaimIn,
+    RequireRole,
+    RequireAnyRole,
 )
 from .engine import ClaimValidator
 
@@ -20,4 +22,6 @@ __all__ = [
     "RequireClaim",
     "RequireSubject",
     "RequireClaimIn",
+    "RequireRole",
+    "RequireAnyRole",
 ]

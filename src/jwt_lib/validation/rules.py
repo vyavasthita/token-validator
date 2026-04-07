@@ -247,3 +247,74 @@ class RequireClaimIn(ClaimRule):
                 f"Claim '{self.claim_name}' value '{actual}' not in allowed values: "
                 f"{', '.join(str(v) for v in sorted(self.allowed_values))}."
             )
+
+
+class RequireRole(ClaimRule):
+    """
+    Rule that requires ALL specified roles to be present in the 'roles' claim.
+
+    The 'roles' claim is expected to be a list of strings.
+    """
+
+    def __init__(self, roles: list[str]) -> None:
+        """
+        Initialize the rule with required roles.
+
+        Args:
+            roles: List of role strings that must all be present.
+        """
+        self.required_roles: set[str] = set(roles)
+
+    async def validate(self, claims: TrustedClaims) -> None:
+        """
+        Validate that all required roles are present.
+
+        Args:
+            claims: The verified claims to validate.
+
+        Raises:
+            PermissionDeniedError: If any required role is missing.
+        """
+        roles_value: Any = claims.get("roles", [])
+        token_roles: set[str] = set(roles_value) if isinstance(roles_value, list) else set()
+
+        if not self.required_roles.issubset(token_roles):
+            missing = self.required_roles - token_roles
+            raise PermissionDeniedError(
+                f"Missing required roles: {', '.join(sorted(missing))}"
+            )
+
+
+class RequireAnyRole(ClaimRule):
+    """
+    Rule that requires at least one of the specified roles to be present.
+
+    The 'roles' claim is expected to be a list of strings.
+    """
+
+    def __init__(self, roles: list[str]) -> None:
+        """
+        Initialize the rule with acceptable roles.
+
+        Args:
+            roles: List of role strings, at least one must be present.
+        """
+        self.acceptable_roles: set[str] = set(roles)
+
+    async def validate(self, claims: TrustedClaims) -> None:
+        """
+        Validate that at least one acceptable role is present.
+
+        Args:
+            claims: The verified claims to validate.
+
+        Raises:
+            PermissionDeniedError: If none of the acceptable roles are present.
+        """
+        roles_value: Any = claims.get("roles", [])
+        token_roles: set[str] = set(roles_value) if isinstance(roles_value, list) else set()
+
+        if not (self.acceptable_roles & token_roles):
+            raise PermissionDeniedError(
+                f"Token must have at least one of: {', '.join(sorted(self.acceptable_roles))}."
+            )
