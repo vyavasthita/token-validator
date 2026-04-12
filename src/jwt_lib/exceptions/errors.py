@@ -73,3 +73,9 @@ class SigningKeyNotFoundError(JWTError):
     """Raised when the signing key cannot be found in JWKS."""
 
     default_message = "The signing key was not found in JWKS."
+
+
+class ConfigurationError(JWTError):
+    """Raised when required configuration (issuer, jwks_host, etc.) is missing or invalid."""
+
+    default_message = "Required JWT configuration is missing or invalid."

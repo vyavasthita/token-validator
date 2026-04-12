@@ -8,7 +8,7 @@ from typing import Iterable
 from .authenticator import Authenticator
 
 from jwt_lib.claims import TrustedClaims
-from jwt_lib.exceptions import JWTError
+from jwt_lib.exceptions import JWTError, ConfigurationError
 from jwt_lib.profiles import TokenProfile, UserProfile
 from jwt_lib.verifier import JWTVerifier, UserJWTVerifier
 from jwt_lib.validation import ClaimRule
@@ -29,6 +29,19 @@ class UserAuthenticator(Authenticator):
         super().__init__()
         # Store thin configuration that gets forwarded to the verifier/profile.
 
+        if not issuer:
+            msg = "UserAuthenticator requires a non-empty 'issuer'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
+        if not jwks_host:
+            msg = "UserAuthenticator requires a non-empty 'jwks_host'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
+        if not audience:
+            msg = "UserAuthenticator requires a non-empty 'audience'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
+        
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience

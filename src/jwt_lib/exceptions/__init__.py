@@ -12,6 +12,7 @@ from .errors import (
     PermissionDeniedError,
     AlgorithmNotAllowedError,
     SigningKeyNotFoundError,
+    ConfigurationError,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "PermissionDeniedError",
     "AlgorithmNotAllowedError",
     "SigningKeyNotFoundError",
+    "ConfigurationError",
 ]
