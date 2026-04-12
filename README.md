@@ -63,6 +63,25 @@ print(claims.subject)
 | `RequireGrantType` | exact | `gty` | Token must have a specific grant type |
 | `RequireClaimIn` | in-set | any | Claim value must be one of an allowed set |
 
+## Logging
+
+The library logs under the `jwt_lib` namespace (e.g. `jwt_lib.authenticator.user_authenticator`, `jwt_lib.verifier.base_verifier`). By default Python loggers inherit the root level, which is `WARNING` — so `INFO`-level messages like successful validations won't appear unless you explicitly configure the level:
+
+```python
+import logging
+
+logging.getLogger("jwt_lib").setLevel(logging.INFO)   # or DEBUG for full detail
+```
+
+Key log events:
+
+| Level | Example |
+|-------|---------|
+| `INFO` | `UserJWTVerifier succeeded issuer=auth-service, audience=auth-service.` |
+| `INFO` | `UserProfile validation passed profile=UserProfile.` |
+| `WARNING` | `UserAuthenticator validation failed for issuer=auth-service, error=…` |
+| `DEBUG` | `Fetching JWKS from http://auth-service:2002/auth-service/token/.well-known/jwks.json` |
+
 ## Run This Repository Locally
 
 ```bash
