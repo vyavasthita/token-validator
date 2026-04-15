@@ -4,6 +4,7 @@
     <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+" />
     <img src="https://img.shields.io/badge/token-user%20%7C%20auth0-success" alt="Supported token types" />
     <img src="https://img.shields.io/badge/tests-pytest-informational" alt="Tests" />
+    <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" />
 </p>
 
 JWT validation library for Python services.
@@ -18,6 +19,17 @@ JWT validation library for Python services.
 - Built-in issuer, audience, signature, and claim checks
 - Ready-to-run examples for both token types
 - Unit and integration test coverage
+
+---
+
+## Skills Demonstrated
+
+- **Strategy pattern for multi-token-type support** — `UserAuthenticator` and `Auth0Authenticator` share a common interface; adding a new token type (e.g. API key) requires only a new strategy implementation.
+- **Async JWKS fetching with TTL cache** — `AsyncJWKSFetcher` uses retry logic and cache expiry to minimize network calls while staying secure against key rotation.
+- **Composable claim rules** — `RequireRole`, `RequireAnyScope`, `RequireClaim`, etc. are reusable rule objects that can be mixed and matched per endpoint; no hardcoded authorization logic.
+- **Separation of cryptographic and business validation** — `JWTVerifier` handles JOSE/signature verification; `TokenProfile` + `ClaimValidator` handle domain rules. Each layer is independently testable.
+- **Library-first design** — zero framework coupling; installable via `poetry add` from any Python service with no transitive web dependencies.
+- **Unit + integration test coverage** — cryptographic verification, claim validation, JWKS fetching, and end-to-end token flows are all covered with pytest.
 
 ## Install
 
@@ -223,3 +235,9 @@ token-validator/
 ```
 
 </details>
+
+---
+
+## License
+
+[MIT](LICENSE) — Copyright © 2026 Dilip Kumar Sharma.
