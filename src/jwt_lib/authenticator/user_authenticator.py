@@ -30,17 +30,19 @@ class UserAuthenticator(Authenticator):
         # Store thin configuration that gets forwarded to the verifier/profile.
 
         if not issuer:
-            msg = "UserAuthenticator requires a non-empty 'issuer'."
-            logger.error(msg)
-            raise ConfigurationError(msg)
+            message = "UserAuthenticator requires a non-empty 'issuer'."
+            logger.error(message)
+            raise ConfigurationError(message)
+        
         if not jwks_host:
-            msg = "UserAuthenticator requires a non-empty 'jwks_host'."
-            logger.error(msg)
-            raise ConfigurationError(msg)
+            message = "UserAuthenticator requires a non-empty 'jwks_host'."
+            logger.error(message)
+            raise ConfigurationError(message)
+        
         if not audience:
-            msg = "UserAuthenticator requires a non-empty 'audience'."
-            logger.error(msg)
-            raise ConfigurationError(msg)
+            message = "UserAuthenticator requires a non-empty 'audience'."
+            logger.error(message)
+            raise ConfigurationError(message)
         
         self.issuer = issuer
         self.jwks_host = jwks_host
