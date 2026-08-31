@@ -52,7 +52,7 @@ class TokenProfile(ABC):
 
     def __repr__(self) -> str:
         return f"<{self.profile_name}>"
-    
+
     @abstractmethod
     async def validate(
         self,
@@ -72,7 +72,7 @@ class TokenProfile(ABC):
             InvalidClaimError: If a claim validation fails.
             PermissionDeniedError: If a permission check fails.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def _custom_validations(self, claims: TrustedClaims) -> None:
@@ -88,7 +88,7 @@ class TokenProfile(ABC):
         Raises:
             JWTError subclass: If validation fails.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     async def _apply_extra_rules(
         self,
@@ -101,7 +101,7 @@ class TokenProfile(ABC):
             return None
 
         concrete_rules: list[ClaimRule] = []
-        
+
         for rule in extra_rules:
             if not isinstance(rule, ClaimRule):
                 raise InvalidClaimError(
