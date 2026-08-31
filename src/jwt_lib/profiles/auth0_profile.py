@@ -31,11 +31,11 @@ class Auth0Profile(TokenProfile):
         self.audience = audience
         self.expected_app_name = app_name
         self.expected_grant_type = AUTH_0_GRANT_TYPE
-        
+
         super().__init__(self._build_rules())
 
-        logger.info(
-            f"Initialized Auth0Profile issuer={issuer}, audience={audience}, app_name={app_name}, grant_type={self.expected_grant_type}."
+        logger.debug(
+            f"Initialized Auth0Profile with app_name={app_name}, grant_type={self.expected_grant_type}."
         )
 
     @property
@@ -49,7 +49,7 @@ class Auth0Profile(TokenProfile):
     @issuer.setter
     def issuer(self, value: str) -> None:
         self._issuer = value
-        
+
     def _build_rules(self) -> list[ClaimRule]:
         """Require core Auth0 service token claims."""
         rules: list[ClaimRule] = [RequireClaim("gty", self.expected_grant_type)]
@@ -72,18 +72,20 @@ class Auth0Profile(TokenProfile):
                 raise InvalidClaimError(
                     f"Invalid appName claim: expected '{self.expected_app_name}' but found '{actual_app}'."
                 )
-            logger.debug(f"Auth0Profile appName={self.expected_app_name} validation successful.")
-            
+            logger.debug(
+                f"Auth0Profile appName={self.expected_app_name} validation successful."
+            )
+
     async def validate(
         self,
         claims: TrustedClaims,
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> None:
-        logger.info(f"Auth0Profile validating claims profile={self.profile_name}.")
-        
+        logger.debug(f"Auth0Profile validating claims profile={self.profile_name}.")
+
         await self._claim_validator.validate(claims)
-        
+
         if extra_rules:
             await self._apply_extra_rules(claims, extra_rules)
-        
+
         await self._custom_validations(claims)
