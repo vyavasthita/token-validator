@@ -64,5 +64,8 @@ class ClaimValidator:
 
         for rule in self._rules:
             active_rule: ClaimRule = rule
-            logger.debug(f"Running rule {active_rule.__class__.__name__}, with claims={claims}.")
+            claim_info = getattr(active_rule, "claim_name", "")
+            logger.debug(
+                f"Running rule {active_rule.__class__.__name__}({claim_info})."
+            )
             await active_rule.validate(claims)
