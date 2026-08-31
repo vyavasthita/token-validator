@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import cast, Any
+from typing import cast, Any, Callable, Dict
 
 from .base_verifier import JWTVerifier
 
@@ -33,17 +33,30 @@ class UserJWTVerifier(JWTVerifier):
         issuer: str,
         jwks_host: str,
         audience: str,
+        headers_provider: Callable[[], Dict[str, str]] | None = None,
+        cache_ttl: float | None = None,
     ) -> None:
-        """Capture policy toggles (clock skew, JOSE expectations, etc.)."""
+        """Capture policy toggles (clock skew, JOSE expectations, etc.).
+
+        Parameters
+        ----------
+        cache_ttl:
+            JWKS cache TTL in seconds. Passed through to JWKSCache.
+            When None, the library default from config is used.
+        """
         super().__init__(
             issuer=issuer,
             jwks_host=jwks_host,
             audience=audience,
             allowed_algorithms=USER_ALLOWED_ALGORITHMS,
+            headers_provider=headers_provider,
+            cache_ttl=cache_ttl,
         )
         self.clock_skew_seconds = max(USER_CLOCK_SKEW_SECONDS, 0)
         self.max_token_age_seconds = (
-            None if USER_MAX_TOKEN_AGE_SECONDS is None else max(USER_MAX_TOKEN_AGE_SECONDS, 0)
+            None
+            if USER_MAX_TOKEN_AGE_SECONDS is None
+            else max(USER_MAX_TOKEN_AGE_SECONDS, 0)
         )
         self.expected_header_typ = USER_HEADER_TYP
         self.expected_header_alg = USER_HEADER_ALG
@@ -64,7 +77,8 @@ class UserJWTVerifier(JWTVerifier):
         """
         if (typ := header.get("typ")) != self.expected_header_typ:
             logger.warning(
-                f"Rejecting token issuer={self.issuer} reason=header_typ_mismatch actual_typ={typ}"
+                f"Rejecting token issuer={self.issuer} reason=header_typ_mismatch,"
+                f" actual_typ={typ}, expected_typ={self.expected_header_typ}"
             )
             raise InvalidClaimError(
                 f"Token header typ must be '{self.expected_header_typ}'"
@@ -77,12 +91,13 @@ class UserJWTVerifier(JWTVerifier):
         """
         if (alg := header.get("alg")) != self.expected_header_alg:
             logger.warning(
-                f"Rejecting token issuer={self.issuer} reason=header_alg_mismatch actual_alg={alg}"
+                f"Rejecting token issuer={self.issuer} reason=header_alg_mismatch,"
+                f" actual_alg={alg}, expected_alg={self.expected_header_alg}"
             )
             raise InvalidClaimError(
                 f"Token header alg must be '{self.expected_header_alg}'"
             )
-        
+
     def _check_iat(self, claims: dict[str, object], now: int, skew: int) -> int:
         """
         Validate the 'iat' (issued at) claim:
@@ -92,20 +107,27 @@ class UserJWTVerifier(JWTVerifier):
         Raises InvalidClaimError if invalid.
         """
         iat_source: Any = claims.get("iat", _MISSING)
-        
+
         try:
             iat: int = int(cast(NumericClaim, iat_source))
         except (TypeError, ValueError) as exc:
             if iat_source is _MISSING:
-                logger.warning(f"Rejecting token issuer={self.issuer} reason=missing_iat")
+                logger.warning(
+                    f"Rejecting token issuer={self.issuer} reason=missing_iat"
+                )
                 raise InvalidClaimError("iat claim is required") from exc
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=non_numeric_iat")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=non_numeric_iat"
+            )
             raise InvalidClaimError("iat claim must be numeric") from exc
-        
+
         if iat > now + skew:
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=iat_in_future")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=iat_in_future,"
+                f" iat={iat}, now={now}, skew={skew}"
+            )
             raise InvalidClaimError("iat claim cannot be in the future")
-        
+
         return iat
 
     def _check_max_token_age(self, iat: int, now: int, skew: int) -> None:
@@ -119,7 +141,10 @@ class UserJWTVerifier(JWTVerifier):
             self.max_token_age_seconds is not None
             and (now - iat) > self.max_token_age_seconds + skew
         ):
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=token_too_old")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=token_too_old,"
+                f" iat={iat}, now={now}, max_age={self.max_token_age_seconds}"
+            )
             raise InvalidClaimError("Token exceeds the maximum allowed age")
 
     def _check_nbf(self, claims: dict[str, object], now: int, skew: int) -> None:
@@ -134,13 +159,20 @@ class UserJWTVerifier(JWTVerifier):
             nbf: int = int(cast(NumericClaim, nbf_source))
         except (TypeError, ValueError) as exc:
             if nbf_source is _MISSING:
-                logger.warning(f"Rejecting token issuer={self.issuer} reason=missing_nbf")
+                logger.warning(
+                    f"Rejecting token issuer={self.issuer} reason=missing_nbf"
+                )
                 raise InvalidClaimError("nbf claim is required") from exc
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=non_numeric_nbf")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=non_numeric_nbf"
+            )
             raise InvalidClaimError("nbf claim must be numeric") from exc
-        
+
         if now + skew < nbf:
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=nbf_in_future")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=nbf_in_future,"
+                f" nbf={nbf}, now={now}, skew={skew}"
+            )
             raise InvalidClaimError("Token is not valid yet (nbf in future)")
 
     def _check_exp(self, claims: dict[str, object], now: int) -> None:
@@ -156,16 +188,23 @@ class UserJWTVerifier(JWTVerifier):
             exp: int = int(cast(NumericClaim, exp_source))
         except (TypeError, ValueError) as exc:
             if exp_source is _MISSING:
-                logger.warning(f"Rejecting token issuer={self.issuer} reason=missing_exp")
+                logger.warning(
+                    f"Rejecting token issuer={self.issuer} reason=missing_exp"
+                )
                 raise InvalidClaimError("exp claim is required") from exc
-            
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=non_numeric_exp")
+
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=non_numeric_exp"
+            )
             raise InvalidClaimError("exp claim must be numeric") from exc
-        
+
         if now >= exp:
-            logger.warning(f"Rejecting token issuer={self.issuer} reason=token_expired")
+            logger.warning(
+                f"Rejecting token issuer={self.issuer} reason=token_expired,"
+                f" exp={exp}, now={now}"
+            )
             raise InvalidClaimError("Token has expired")
-        
+
     async def validate(self, token: str) -> TrustedClaims:
         """Run JOSE + temporal enforcement after base cryptographic checks."""
 
@@ -178,9 +217,11 @@ class UserJWTVerifier(JWTVerifier):
         header, claims = await self._verify_token(token)
 
         # Ensure the JOSE header exposes kid/typ/alg per user-token policy.
-        logger.debug(f"Enforcing header rules expected_typ={self.expected_header_typ}, expected_alg={self.expected_header_alg}")
+        logger.debug(
+            f"Enforcing header rules expected_typ={self.expected_header_typ}, expected_alg={self.expected_header_alg}"
+        )
         self._check_header_kid(header)  # kid must be present
-        self._check_header_typ(header) 
+        self._check_header_typ(header)
         self._check_header_alg(header)
 
         # Apply issued-at, max-age, not-before, and expiration checks etc
@@ -194,8 +235,6 @@ class UserJWTVerifier(JWTVerifier):
         self._check_max_token_age(iat, now, skew)
         self._check_nbf(claims, now, skew)
         self._check_exp(claims, now)
-        
-        logger.debug(
-            f"UserJWTVerifier succeeded issuer={self.issuer}, audience={self.audience}"
-        )
+
+        logger.debug("UserJWTVerifier succeeded.")
         return TrustedClaims(claims, headers=header)
