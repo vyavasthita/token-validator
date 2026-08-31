@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+import time
+from typing import Callable, Dict, Iterable, cast
 
 from .authenticator import Authenticator
 
 from jwt_lib.claims import TrustedClaims
-from jwt_lib.exceptions import JWTError, ConfigurationError
+from jwt_lib.exceptions import ConfigurationError, JWTError
 from jwt_lib.profiles import TokenProfile, UserProfile
 from jwt_lib.verifier import JWTVerifier, UserJWTVerifier
 from jwt_lib.validation import ClaimRule
@@ -25,34 +26,35 @@ class UserAuthenticator(Authenticator):
         issuer: str,
         jwks_host: str,
         audience: str,
+        headers_provider: Callable[[], Dict[str, str]] | None = None,
+        cache_ttl: float | None = None,
     ) -> None:
         super().__init__()
-        # Store thin configuration that gets forwarded to the verifier/profile.
 
         if not issuer:
-            message = "UserAuthenticator requires a non-empty 'issuer'."
-            logger.error(message)
-            raise ConfigurationError(message)
-        
+            msg = "UserAuthenticator requires a non-empty 'issuer'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
         if not jwks_host:
-            message = "UserAuthenticator requires a non-empty 'jwks_host'."
-            logger.error(message)
-            raise ConfigurationError(message)
-        
+            msg = "UserAuthenticator requires a non-empty 'jwks_host'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
         if not audience:
-            message = "UserAuthenticator requires a non-empty 'audience'."
-            logger.error(message)
-            raise ConfigurationError(message)
-        
+            msg = "UserAuthenticator requires a non-empty 'audience'."
+            logger.error(msg)
+            raise ConfigurationError(msg)
+
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
-        
+        self._headers_provider = headers_provider
+        self._cache_ttl = cache_ttl
+
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()
 
         logger.info(
-            f"Initialized UserAuthenticator issuer={self.issuer}, audience={self.audience}."
+            f"UserAuthenticator initialized with issuer={self.issuer}, audience={self.audience}, jwks_url={self.jwks_host}/token/.well-known/jwks.json."
         )
 
     def _create_verifier(self) -> JWTVerifier:
@@ -61,7 +63,14 @@ class UserAuthenticator(Authenticator):
             issuer=self.issuer,
             jwks_host=self.jwks_host,
             audience=self.audience,
+            headers_provider=self._headers_provider,
+            cache_ttl=self._cache_ttl,
         )
+
+    async def close(self) -> None:
+        """Close the underlying JWKS cache httpx client for clean shutdown."""
+        await self._verifier.close()
+        logger.info("UserAuthenticator closed.")
 
     def _create_profile(self) -> TokenProfile:
         """Instantiate the strict profile used for claims validation."""
@@ -73,18 +82,28 @@ class UserAuthenticator(Authenticator):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
         """Verify the token and enforce profile + optional claim rules."""
-
+        user_profile = cast(UserProfile, self.profile)
+        logger.info(
+            f"User token validation started"
+            f" issuer={self.issuer},"
+            f" audience={self.audience},"
+            f" jwks_url={self.jwks_host}/token/.well-known/jwks.json,"
+            f" tokenType={user_profile.expected_token_type},"
+            f" principalType={user_profile.expected_principal_type},"
+            f" connectionMethods={','.join(user_profile.expected_connection_methods)}"
+        )
+        start = time.monotonic()
         try:
             claims: TrustedClaims = await self.verifier.validate(token)
-            logger.info(
-                f"UserJWTVerifier succeeded issuer={self.issuer}, audience={self.audience}."
-            )
-
             await self.profile.validate(claims, extra_rules=extra_rules)
+            duration_ms = (time.monotonic() - start) * 1000
             logger.info(
-                f"UserProfile validation passed profile={self.profile.profile_name}."
+                f"User token validated successfully"
+                f" uid={claims.get('uid', 'N/A')},"
+                f" tid={claims.get('tid', 'N/A')},"
+                f" jti={claims.get('jti', 'N/A')},"
+                f" duration_ms={duration_ms:.1f}"
             )
-
             return claims
         except JWTError as error:
             logger.warning(
