@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable
+import time
+from typing import Any, Callable, Dict, Iterable, cast
 
 from .authenticator import Authenticator
 
@@ -26,20 +27,24 @@ class Auth0Authenticator(Authenticator):
         jwks_host: str,
         audience: str | None = None,
         profile_kwargs: dict[str, Any] | None = None,
+        headers_provider: Callable[[], Dict[str, str]] | None = None,
+        cache_ttl: float | None = None,
     ) -> None:
         super().__init__()
-        
+
         # Configuration is stored verbatim and forwarded to verifier/profile.
         self.issuer = issuer
         self.jwks_host = jwks_host
         self.audience = audience
         self.profile_kwargs = dict(profile_kwargs or {})
-        
+        self._headers_provider = headers_provider
+        self._cache_ttl = cache_ttl
+
         self._verifier = self._create_verifier()
         self._profile = self._create_profile()
 
         logger.info(
-            f"Initialized Auth0Authenticator issuer={self.issuer}, audience={self.audience}."
+            f"Auth0Authenticator initialized with issuer={self.issuer}, audience={self.audience}, jwks_url={self.jwks_host}/token/.well-known/jwks.json."
         )
 
     def _create_verifier(self) -> JWTVerifier:
@@ -48,7 +53,14 @@ class Auth0Authenticator(Authenticator):
             issuer=self.issuer,
             jwks_host=self.jwks_host,
             audience=self.audience,
+            headers_provider=self._headers_provider,
+            cache_ttl=self._cache_ttl,
         )
+
+    async def close(self) -> None:
+        """Close the underlying JWKS cache httpx client for clean shutdown."""
+        await self._verifier.close()
+        logger.info("Auth0Authenticator closed.")
 
     def _create_profile(self) -> TokenProfile:
         """Instantiate the Auth0Profile with any optional overrides."""
@@ -64,18 +76,29 @@ class Auth0Authenticator(Authenticator):
         extra_rules: Iterable[ClaimRule] | None = None,
     ) -> TrustedClaims:
         """Verify the token, then run profile + optional claim rules."""
-        logger.debug(
-            f"Auth0Authenticator validating token with verifier={self.verifier.__class__.__name__}, profile={self.profile.profile_name}."
+        auth0_profile = cast(Auth0Profile, self.profile)
+        logger.info(
+            f"Auth0 token validation started"
+            f" issuer={self.issuer},"
+            f" audience={self.audience},"
+            f" jwks_url={self.jwks_host}/token/.well-known/jwks.json,"
+            f" appName={auth0_profile.expected_app_name},"
+            f" gty={auth0_profile.expected_grant_type}"
         )
+        start = time.monotonic()
         try:
             claims: TrustedClaims = await self.verifier.validate(token)
-            logger.info(
-                f"Auth0JWTVerifier succeeded issuer={self.issuer}, audience={self.audience}."
-            )
-            
+
             await self.profile.validate(claims, extra_rules=extra_rules)
+
+            duration_ms = (time.monotonic() - start) * 1000
+
             logger.info(
-                f"Auth0Profile validation passed profile={self.profile.profile_name}."
+                f"Auth0 token validated successfully"
+                f" sub={claims.get('sub', 'N/A')},"
+                f" jti={claims.get('jti', 'N/A')},"
+                f" scope={claims.get('scope', 'N/A')},"
+                f" duration_ms={duration_ms:.1f}"
             )
             return claims
         except JWTError as error:
@@ -86,6 +109,5 @@ class Auth0Authenticator(Authenticator):
         except Exception:
             logger.exception(
                 f"Auth0Authenticator encountered unexpected error. Issuer={self.issuer}."
-
             )
             raise
