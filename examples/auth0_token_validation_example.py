@@ -26,13 +26,16 @@ async def main():
     logger.info("\n%s", "=" * 70)
     scope_rules: RequireScopes = RequireScopes(["update:core"])
 
+    # cache_ttl controls how long JWKS keys are cached in memory (seconds).
+    # Omit it to use the library default (300 s). Override per-environment as needed.
+    authenticator: Auth0Authenticator = Auth0Authenticator(
+        issuer=os.getenv("AUTH_0_ISSUER", ""),
+        jwks_host=os.getenv("AUTH_0_JWKS_HOST", ""),
+        audience=os.getenv("AUTH_0_AUDIENCE"),
+        profile_kwargs={"app_name": "lmr-db-client"},
+        cache_ttl=float(os.getenv("JWKS_CACHE_TTL", "300")),
+    )
     try:
-        authenticator: Auth0Authenticator = Auth0Authenticator(
-            issuer=os.getenv("AUTH_0_ISSUER", ""),
-            jwks_host=os.getenv("AUTH_0_JWKS_HOST", ""),
-            audience=os.getenv("AUTH_0_AUDIENCE"),
-            profile_kwargs={"app_name": "lmr-db-client"}
-        )
         claims: TrustedClaims = await authenticator.validate(
             os.getenv("AUTH_0_TOKEN", ""),
             extra_rules=[scope_rules],
@@ -58,6 +61,9 @@ async def main():
         logger.error("%s", error)
     except Exception as error:
         logger.exception("✗ Unexpected error: %s", error)
+    finally:
+        # Always close the authenticator to release the underlying httpx client.
+        await authenticator.close()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
